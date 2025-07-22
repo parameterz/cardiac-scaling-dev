@@ -4,6 +4,13 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 // src/components/cardiacScaling/MultiExponentScalingExplorer.tsx
 
+import { 
+  calculateBSA, 
+  calculateLBM, 
+  BSA_FORMULA_INFO, 
+  LBM_FORMULA_INFO 
+} from '@/utils/bodyComposition/formulaRegistry';
+
 // Universal scaling exponents based on dimensional analysis
 const SCALING_EXPONENTS = {
   linear: { lbm: 0.33, bsa: 0.5, height: 1.0 },
@@ -22,12 +29,6 @@ interface MeasurementDefinition {
       indexType: 'bsa' | 'height';
     };
   };
-}
-
-interface FormulaDefinition {
-  id: string;
-  name: string;
-  calculate: (height: number, weight: number, sex?: string) => number;
 }
 
 // Helper function to get expected exponents for a measurement type
@@ -69,35 +70,9 @@ const MEASUREMENTS: MeasurementDefinition[] = [
   }
 ];
 
-const BSA_FORMULAS: FormulaDefinition[] = [
-  {
-    id: 'dubois',
-    name: 'Du Bois & Du Bois (1916)',
-    calculate: (h, w) => 0.007184 * Math.pow(h, 0.725) * Math.pow(w, 0.425)
-  },
-  {
-    id: 'mosteller',
-    name: 'Mosteller (1987)',
-    calculate: (h, w) => Math.sqrt((h * w) / 3600)
-  }
-];
-
-const LBM_FORMULAS: FormulaDefinition[] = [
-  {
-    id: 'boer',
-    name: 'Boer (1984)',
-    calculate: (h, w, sex) => sex === 'male' 
-      ? (0.407 * w) + (0.267 * h) - 19.2
-      : (0.252 * w) + (0.473 * h) - 48.3
-  },
-  {
-    id: 'hume',
-    name: 'Hume & Weyers (1971)',
-    calculate: (h, w, sex) => sex === 'male'
-      ? (0.32810 * w) + (0.33929 * h) - 29.5336
-      : (0.29569 * w) + (0.41813 * h) - 43.2933
-  }
-];
+// Get available formulas from registry (exclude Lee formula which requires ethnicity)
+const AVAILABLE_BSA_FORMULAS = BSA_FORMULA_INFO;
+const AVAILABLE_LBM_FORMULAS = LBM_FORMULA_INFO.filter(f => f.id !== 'lee');
 
 const MultiExponentScalingExplorer = () => {
   // Configuration state
@@ -125,22 +100,22 @@ const MultiExponentScalingExplorer = () => {
   
   // Get current measurement and formulas
   const currentMeasurement = MEASUREMENTS.find(m => m.id === selectedMeasurement);
-  const bsaFormula = BSA_FORMULAS.find(f => f.id === selectedBSAFormula);
-  const lbmFormula = LBM_FORMULAS.find(f => f.id === selectedLBMFormula);
+  const selectedBSAFormulaInfo = AVAILABLE_BSA_FORMULAS.find(f => f.id === selectedBSAFormula);
+  const selectedLBMFormulaInfo = AVAILABLE_LBM_FORMULAS.find(f => f.id === selectedLBMFormula);
   
-  if (!currentMeasurement || !bsaFormula || !lbmFormula) {
+  if (!currentMeasurement || !selectedBSAFormulaInfo || !selectedLBMFormulaInfo) {
     return <div>Loading...</div>;
   }
   
-  // Calculate body composition values
+  // Calculate body composition values using registry functions
   const bsaValues = {
-    male: bsaFormula.calculate(referenceHeights.male, weights.male),
-    female: bsaFormula.calculate(referenceHeights.female, weights.female)
+    male: calculateBSA(selectedBSAFormula, weights.male, referenceHeights.male),
+    female: calculateBSA(selectedBSAFormula, weights.female, referenceHeights.female)
   };
   
   const lbmValues = {
-    male: lbmFormula.calculate(referenceHeights.male, weights.male, 'male'),
-    female: lbmFormula.calculate(referenceHeights.female, weights.female, 'female')
+    male: calculateLBM(selectedLBMFormula, weights.male, referenceHeights.male, 'male'),
+    female: calculateLBM(selectedLBMFormula, weights.female, referenceHeights.female, 'female')
   };
   
   const heightValues = {
@@ -279,6 +254,13 @@ const MultiExponentScalingExplorer = () => {
         <p className="text-gray-600">
           Discover the optimal allometric relationships for cardiac measurements across different scaling variables and formula choices.
         </p>
+        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            <strong>Formula Impact:</strong> This tool demonstrates how different BSA and LBM formulas affect scaling relationships. 
+            Notice how universal scaling laws (LBM^0.33, BSA^0.5) remain robust across formula choices, 
+            validating the underlying biological relationships.
+          </p>
+        </div>
       </div>
       
       {/* Configuration Panel */}
@@ -307,38 +289,48 @@ const MultiExponentScalingExplorer = () => {
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            BSA Formula
+            BSA Formula ({AVAILABLE_BSA_FORMULAS.length} available)
           </label>
           <select
             value={selectedBSAFormula}
             onChange={(e) => setSelectedBSAFormula(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            {BSA_FORMULAS.map(f => (
+            {AVAILABLE_BSA_FORMULAS.map(f => (
               <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </select>
           <div className="mt-1 text-xs text-gray-500">
-            Male: {bsaValues.male.toFixed(2)} m², Female: {bsaValues.female.toFixed(2)} m²
+            {selectedBSAFormulaInfo.year} • Male: {bsaValues.male.toFixed(2)} m², Female: {bsaValues.female.toFixed(2)} m²
           </div>
+          {selectedBSAFormulaInfo.notes && (
+            <div className="mt-1 text-xs text-blue-600">
+              {selectedBSAFormulaInfo.notes}
+            </div>
+          )}
         </div>
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            LBM Formula
+            LBM Formula ({AVAILABLE_LBM_FORMULAS.length} available)
           </label>
           <select
             value={selectedLBMFormula}
             onChange={(e) => setSelectedLBMFormula(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            {LBM_FORMULAS.map(f => (
+            {AVAILABLE_LBM_FORMULAS.map(f => (
               <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </select>
           <div className="mt-1 text-xs text-gray-500">
-            Male: {lbmValues.male.toFixed(1)} kg, Female: {lbmValues.female.toFixed(1)} kg
+            {selectedLBMFormulaInfo.year} • Male: {lbmValues.male.toFixed(1)} kg, Female: {lbmValues.female.toFixed(1)} kg
           </div>
+          {selectedLBMFormulaInfo.notes && (
+            <div className="mt-1 text-xs text-blue-600">
+              {selectedLBMFormulaInfo.notes}
+            </div>
+          )}
         </div>
       </div>
       
@@ -577,6 +569,15 @@ const MultiExponentScalingExplorer = () => {
           <div className="mt-3 p-3 bg-blue-100 border border-blue-300 rounded text-blue-700 text-sm">
             <strong>Empirical Sweet Spot:</strong> Height^{exponents.height.toFixed(1)} represents the empirically-derived scaling that best fits real cardiac data - 
             biological systems rarely follow perfect geometric similarity!
+          </div>
+        )}
+        
+        {(selectedBSAFormula === 'dubois' || selectedBSAFormula === 'dreyer') && (
+          <div className="mt-3 p-3 bg-purple-100 border border-purple-300 rounded text-purple-700 text-sm">
+            <strong>Historical Formula:</strong> You're using a {selectedBSAFormulaInfo.year} formula! 
+            {selectedBSAFormula === 'dubois' && " The Du Bois formula remains the most cited despite being over 100 years old."}
+            {selectedBSAFormula === 'dreyer' && " The Dreyer formula is even older, using only weight."}
+            {" Notice how universal scaling relationships still work across these different approaches."}
           </div>
         )}
       </div>
