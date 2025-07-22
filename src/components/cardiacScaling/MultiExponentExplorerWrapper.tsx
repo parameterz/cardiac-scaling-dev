@@ -2,6 +2,7 @@
 
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import MultiExponentScalingExplorer from './MultiExponentExplorer';
 
 interface MultiExponentExplorerWrapperProps {
@@ -51,7 +52,20 @@ const MultiExponentExplorerWrapper = ({
         initialMeasurement={initialMeasurement}
         dataSource="strom"
       />
+      <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+  <h4 className="font-semibold text-blue-800">Ready for Clinical Application?</h4>
+  <p className="text-sm text-blue-700 mb-3">
+    Generate publication-ready coefficients using the Dewey methodology
+  </p>
+  <Link href="/cardiac-scaling/coefficient-calculator">
+    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+      🧮 Calculate Universal Coefficients
+    </button>
+  </Link>
+</div>
     </div>
+    
+    
   );
 };
 
