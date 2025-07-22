@@ -1,7 +1,7 @@
 // src/components/cardiacScaling/visualization/CurveGenerator.ts
 
 import { calculateBSA, calculateLBM } from '@/utils/bodyComposition/formulaRegistry';
-import { getReferencePopulation } from '@/data/populationDefinitions';
+import { getReferencePopulation, POPULATION_GENERATION_RANGES } from '@/data/populationDefinitions';
 import type { EnhancedMeasurementData } from '@/data/stromData';
 
 export interface PopulationPoint {
@@ -13,8 +13,8 @@ export interface PopulationPoint {
 
 export interface ChartDataPoint {
   bsa: number;
-  biologicalMale: number;
-  biologicalFemale: number;
+  biologicalMale: number | undefined;  // undefined outside population range
+  biologicalFemale: number | undefined;  // undefined outside population range
   ratiometricMale: number;
   ratiometricFemale: number;
 }
@@ -27,28 +27,31 @@ export interface ReferencePoint {
 }
 
 /**
- * Generate population range with BSA and LBM values across physiological spectrum
+ * Generate height-based population data with fixed BMI
+ * Uses POPULATION_GENERATION_RANGES for height span (120-220cm)
+ * This creates a clean progression from short to tall adults at consistent BMI
  */
-export const generatePopulationRange = (
+export const generateHeightBasedPopulation = (
+  fixedBMI: number = 24,
   bsaFormula: string = 'dubois',
   lbmFormula: string = 'boer'
 ): { male: PopulationPoint[]; female: PopulationPoint[] } => {
   const populations = { male: [] as PopulationPoint[], female: [] as PopulationPoint[] };
   
-  // Generate realistic population range
-  // Heights: 140-210cm (covers short to very tall adults)
-  // BMI: 18-35 (underweight to obese class II)
-  for (let height = 140; height <= 210; height += 5) {
-    for (let bmi = 18; bmi <= 35; bmi += 2) {
-      const weight = bmi * Math.pow(height / 100, 2);
+  // Use the defined height range from populationDefinitions (120-220cm)
+  const heightRange = POPULATION_GENERATION_RANGES.height;
+  const step = heightRange.step || 2; // Default 2cm steps for smooth curves
+  
+  // Generate population across height range with fixed BMI
+  for (let height = heightRange.min; height <= heightRange.max; height += step) {
+    const weight = fixedBMI * Math.pow(height / 100, 2);
+    
+    (['male', 'female'] as const).forEach(sex => {
+      const bsa = calculateBSA(bsaFormula, weight, height);
+      const lbm = calculateLBM(lbmFormula, weight, height, sex);
       
-      (['male', 'female'] as const).forEach(sex => {
-        const bsa = calculateBSA(bsaFormula, weight, height);
-        const lbm = calculateLBM(lbmFormula, weight, height, sex);
-        
-        populations[sex].push({ height, weight, bsa, lbm });
-      });
-    }
+      populations[sex].push({ height, weight, bsa, lbm });
+    });
   }
   
   return populations;
@@ -97,48 +100,74 @@ export const calculateUniversalLBMCoefficient = (
 };
 
 /**
- * Generate chart data comparing biological vs ratiometric scaling across BSA range
+ * Generate chart data comparing biological vs ratiometric scaling
+ * Biological curves based on height range (120-220cm) with fixed BMI
+ * Ratiometric lines are mathematical and can extend from origin
  */
 export const generateChartData = (
   measurement: EnhancedMeasurementData,
   universalCoeff: number,
-  maxBSA: number = 3.5
+  fixedBMI: number = 24,
+  bsaFormula: string = 'dubois',
+  lbmFormula: string = 'boer'
 ): ChartDataPoint[] => {
-  const chartData: ChartDataPoint[] = [];
-  const stepSize = 0.05;
   
-  // Generate points from 0 to maxBSA
-  for (let bsa = 0; bsa <= maxBSA; bsa += stepSize) {
-    if (bsa === 0) {
-      // Origin point - all scaling methods converge at zero
-      chartData.push({
-        bsa: 0,
-        biologicalMale: 0,
-        biologicalFemale: 0,
-        ratiometricMale: 0,
-        ratiometricFemale: 0
-      });
-      continue;
-    }
-    
-    // For biological curves, estimate LBM from BSA using sex-specific ratios
-    // These are rough approximations based on typical body composition differences
-    // In a full implementation, you'd use the actual population data
-    const estimatedMaleLBM = bsa * 35; // kg - Male LBM/BSA ratio ≈ 35
-    const estimatedFemaleLBM = bsa * 27; // kg - Female LBM/BSA ratio ≈ 27
-    
-    const lbmExponent = measurement.type === 'linear' ? 0.33 : 
-                       measurement.type === 'area' ? 0.67 : 1.0;
-    
-    // Biological predictions using universal LBM coefficient
-    // prediction = universal_coefficient × LBM^exponent
-    const biologicalMale = universalCoeff * Math.pow(estimatedMaleLBM, lbmExponent);
-    const biologicalFemale = universalCoeff * Math.pow(estimatedFemaleLBM, lbmExponent);
-    
-    // Ratiometric predictions (straight lines from origin)
-    // prediction = BSA_indexed_reference × BSA
+  // Generate height-based population with fixed BMI
+  const populations = generateHeightBasedPopulation(fixedBMI, bsaFormula, lbmFormula);
+  
+  const lbmExponent = measurement.type === 'linear' ? 0.33 : 
+                     measurement.type === 'area' ? 0.67 : 1.0;
+  
+  // Calculate biological predictions for actual population
+  const biologicalPointsMale = populations.male.map(p => ({
+    bsa: p.bsa,
+    measurement: universalCoeff * Math.pow(p.lbm, lbmExponent),
+    height: p.height
+  }));
+  
+  const biologicalPointsFemale = populations.female.map(p => ({
+    bsa: p.bsa,
+    measurement: universalCoeff * Math.pow(p.lbm, lbmExponent),
+    height: p.height
+  }));
+  
+  // Sort by BSA for smooth curves
+  biologicalPointsMale.sort((a, b) => a.bsa - b.bsa);
+  biologicalPointsFemale.sort((a, b) => a.bsa - b.bsa);
+  
+  // Get BSA range from population data
+  const allBSAs = [...biologicalPointsMale, ...biologicalPointsFemale].map(p => p.bsa);
+  const minPopBSA = Math.min(...allBSAs);
+  const maxPopBSA = Math.max(...allBSAs);
+  const maxChartBSA = Math.max(3.5, maxPopBSA * 1.1);
+  
+  // Create chart data
+  const chartData: ChartDataPoint[] = [];
+  
+  // Add origin point (only ratiometric lines start at origin)
+  chartData.push({
+    bsa: 0,
+    biologicalMale: undefined,     // Biological data doesn't extend to origin
+    biologicalFemale: undefined,   // Biological data doesn't extend to origin  
+    ratiometricMale: 0,           // Mathematical line starts at origin
+    ratiometricFemale: 0          // Mathematical line starts at origin
+  });
+  
+  // Generate dense points for smooth visualization
+  for (let bsa = 0.05; bsa <= maxChartBSA; bsa += 0.02) {
+    // Ratiometric predictions (mathematical lines)
     const ratiometricMale = measurement.male.bsa.mean * bsa;
     const ratiometricFemale = measurement.female.bsa.mean * bsa;
+    
+    // Biological predictions (only within population range)
+    let biologicalMale = undefined;
+    let biologicalFemale = undefined;
+    
+    if (bsa >= minPopBSA && bsa <= maxPopBSA) {
+      // Find closest population points for interpolation
+      biologicalMale = interpolateFromPopulation(biologicalPointsMale, bsa);
+      biologicalFemale = interpolateFromPopulation(biologicalPointsFemale, bsa);
+    }
     
     chartData.push({
       bsa,
@@ -153,8 +182,46 @@ export const generateChartData = (
 };
 
 /**
- * Generate reference points for canonical populations
- * These show where typical male/female reference populations fall on the curves
+ * Interpolate measurement value at target BSA from population data points
+ */
+function interpolateFromPopulation(
+  points: Array<{bsa: number; measurement: number; height: number}>, 
+  targetBSA: number
+): number | undefined {
+  if (points.length === 0) return undefined;
+  
+  // Find surrounding points
+  let lowerPoint = null;
+  let upperPoint = null;
+  
+  for (let i = 0; i < points.length - 1; i++) {
+    if (points[i].bsa <= targetBSA && points[i + 1].bsa >= targetBSA) {
+      lowerPoint = points[i];
+      upperPoint = points[i + 1];
+      break;
+    }
+  }
+  
+  // If exact match or at boundaries
+  if (!lowerPoint || !upperPoint) {
+    const closest = points.reduce((prev, curr) => 
+      Math.abs(curr.bsa - targetBSA) < Math.abs(prev.bsa - targetBSA) ? curr : prev
+    );
+    return Math.abs(closest.bsa - targetBSA) < 0.1 ? closest.measurement : undefined;
+  }
+  
+  // Linear interpolation
+  if (lowerPoint.bsa === upperPoint.bsa) {
+    return lowerPoint.measurement;
+  }
+  
+  const ratio = (targetBSA - lowerPoint.bsa) / (upperPoint.bsa - lowerPoint.bsa);
+  return lowerPoint.measurement + ratio * (upperPoint.measurement - lowerPoint.measurement);
+}
+
+/**
+ * Generate reference points for canonical populations (178cm♂, 164cm♀ at BMI 25)
+ * These show where the established reference populations fall on both scaling approaches
  */
 export const generateReferencePoints = (
   measurement: EnhancedMeasurementData,
