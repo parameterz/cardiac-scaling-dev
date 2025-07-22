@@ -1,86 +1,102 @@
+// src/components/cardiacScaling/MultiExponentScalingExplorer.tsx
+
 "use client";
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-
-// src/components/cardiacScaling/MultiExponentScalingExplorer.tsx
 
 import { 
   calculateBSA, 
   calculateLBM, 
   BSA_FORMULA_INFO, 
-  LBM_FORMULA_INFO 
+  LBM_FORMULA_INFO,
+  type Sex
 } from '@/utils/bodyComposition/formulaRegistry';
-
-// Universal scaling exponents based on dimensional analysis
-const SCALING_EXPONENTS = {
-  linear: { lbm: 0.33, bsa: 0.5, height: 1.0 },
-  mass_volume: { lbm: 1.0, bsa: 1.5, height: 2.1 }
-};
-
-interface MeasurementDefinition {
-  id: string;
-  name: string;
-  type: 'linear' | 'mass_volume';
-  unit: string;
-  referenceData: {
-    [demographic: string]: {
-      mean: number;
-      sd: number;
-      indexType: 'bsa' | 'height';
-    };
-  };
-}
+import { 
+  STROM_MEASUREMENTS, 
+  getStromReferencePopulation,
+  type EnhancedMeasurementData,
+  type MeasurementType 
+} from '@/data/stromData';
+import { 
+  SCALING_EXPONENTS,
+  type ScalingExponents 
+} from '@/data/scalingLaws';
 
 // Helper function to get expected exponents for a measurement type
-const getExpectedExponents = (measurementType: 'linear' | 'mass_volume') => {
+const getExpectedExponents = (measurementType: MeasurementType): ScalingExponents => {
   return SCALING_EXPONENTS[measurementType];
 };
 
-// Sample data - would come from your data layer
-const MEASUREMENTS: MeasurementDefinition[] = [
-  {
-    id: 'lvdd',
-    name: 'LV End-Diastolic Dimension',
-    type: 'linear',
-    unit: 'cm',
+// Helper function to adapt measurement data for component use
+const adaptMeasurementData = (measurement: EnhancedMeasurementData) => {
+  return {
+    id: measurement.id,
+    name: measurement.name,
+    type: measurement.type,
+    unit: measurement.absoluteUnit,
     referenceData: {
-      'male': { mean: 2.3, sd: 0.3, indexType: 'bsa' },
-      'female': { mean: 2.4, sd: 0.3, indexType: 'bsa' }
+      male: {
+        mean: measurement.male.bsa?.mean || 0,
+        sd: measurement.male.bsa?.sd || 0,
+        indexType: 'bsa' as const,
+        height: measurement.male.height,
+        bmi: measurement.male.bmi,
+        height2: measurement.male.height2
+      },
+      female: {
+        mean: measurement.female.bsa?.mean || 0,
+        sd: measurement.female.bsa?.sd || 0,
+        indexType: 'bsa' as const,
+        height: measurement.female.height,
+        bmi: measurement.female.bmi,
+        height2: measurement.female.height2
+      }
     }
-  },
-  {
-    id: 'ivsd',
-    name: 'Interventricular Septal Thickness',
-    type: 'linear',
-    unit: 'cm',
-    referenceData: {
-      'male': { mean: 0.61, sd: 0.11, indexType: 'bsa' },
-      'female': { mean: 0.60, sd: 0.13, indexType: 'bsa' }
-    }
-  },
-  {
-    id: 'lvm',
-    name: 'LV Mass',
-    type: 'mass_volume',
-    unit: 'g',
-    referenceData: {
-      'male': { mean: 84.8, sd: 17.7, indexType: 'bsa' },
-      'female': { mean: 72.2, sd: 15.3, indexType: 'bsa' }
-    }
-  }
-];
+  };
+};
+
+// Get all measurements from stromData, organized by type
+const getAllMeasurements = () => {
+  return STROM_MEASUREMENTS.map(adaptMeasurementData);
+};
+
+// Get subset of key measurements for initial demo
+const getKeyMeasurements = () => {
+  const keyIds = ['lvdd', 'ivsd', 'lvpw', 'lvm', 'lvedv', 'lasv'];
+  return STROM_MEASUREMENTS
+    .filter(m => keyIds.includes(m.id))
+    .map(adaptMeasurementData);
+};
 
 // Get available formulas from registry (exclude Lee formula which requires ethnicity)
 const AVAILABLE_BSA_FORMULAS = BSA_FORMULA_INFO;
 const AVAILABLE_LBM_FORMULAS = LBM_FORMULA_INFO.filter(f => f.id !== 'lee');
 
-const MultiExponentScalingExplorer = () => {
+interface MultiExponentScalingExplorerProps {
+  showAllMeasurements?: boolean;
+  initialMeasurement?: string;
+  dataSource?: 'strom' | 'custom';
+}
+
+const MultiExponentScalingExplorer = ({ 
+  showAllMeasurements = false, 
+  initialMeasurement = 'lvdd',
+  dataSource = 'strom'
+}: MultiExponentScalingExplorerProps) => {
+  // Get measurements based on configuration
+  const availableMeasurements = useMemo(() => {
+    if (dataSource === 'strom') {
+      return showAllMeasurements ? getAllMeasurements() : getKeyMeasurements();
+    }
+    return getKeyMeasurements();
+  }, [showAllMeasurements, dataSource]);
+
   // Configuration state
-  const [selectedMeasurement, setSelectedMeasurement] = useState('lvdd');
+  const [selectedMeasurement, setSelectedMeasurement] = useState(initialMeasurement);
   const [selectedBSAFormula, setSelectedBSAFormula] = useState('dubois');
   const [selectedLBMFormula, setSelectedLBMFormula] = useState('boer');
   
-  // Exponent state
+  // Exponent state - will be updated based on measurement type
   const [exponents, setExponents] = useState({
     bsa: 0.5,
     lbm: 0.33,
@@ -90,23 +106,34 @@ const MultiExponentScalingExplorer = () => {
   // Active scaling variable
   const [activeVariable, setActiveVariable] = useState<'bsa' | 'lbm' | 'height'>('bsa');
   
-  // Reference population
-  const referenceHeights = { male: 178, female: 164 };
-  const targetBMI = 24;
-  const weights = {
-    male: targetBMI * Math.pow(referenceHeights.male / 100, 2),
-    female: targetBMI * Math.pow(referenceHeights.female / 100, 2)
-  };
+  // Get reference population from stromData
+  const maleRef = getStromReferencePopulation('male');
+  const femaleRef = getStromReferencePopulation('female');
+  
+  const referenceHeights = { male: maleRef.height, female: femaleRef.height };
+  const weights = { male: maleRef.weight, female: femaleRef.weight };
   
   // Get current measurement and formulas
-  const currentMeasurement = MEASUREMENTS.find(m => m.id === selectedMeasurement);
+  const currentMeasurement = availableMeasurements.find(m => m.id === selectedMeasurement);
   const selectedBSAFormulaInfo = AVAILABLE_BSA_FORMULAS.find(f => f.id === selectedBSAFormula);
   const selectedLBMFormulaInfo = AVAILABLE_LBM_FORMULAS.find(f => f.id === selectedLBMFormula);
   
   if (!currentMeasurement || !selectedBSAFormulaInfo || !selectedLBMFormulaInfo) {
     return <div>Loading...</div>;
   }
-  
+
+  // Auto-update exponents when measurement type changes
+  React.useEffect(() => {
+    if (currentMeasurement) {
+      const expectedExponents = getExpectedExponents(currentMeasurement.type);
+      setExponents({
+        bsa: expectedExponents.bsa,
+        lbm: expectedExponents.lbm,
+        height: expectedExponents.height
+      });
+    }
+  }, [currentMeasurement?.type]);
+
   // Calculate body composition values using registry functions
   const bsaValues = {
     male: calculateBSA(selectedBSAFormula, weights.male, referenceHeights.male),
@@ -238,10 +265,17 @@ const MultiExponentScalingExplorer = () => {
   const insight = getInsight();
 
   const getDimensionalText = () => {
-    if (currentMeasurement.type === 'linear') {
-      return 'Linear measurements (lengths) scale as LBM^0.33, BSA^0.5, Height^1.0';
-    } else {
-      return 'Mass/Volume measurements scale as LBM^1.0, BSA^1.5, Height^2.1 (note: empirically around 2, not 3 as pure geometry would suggest!)';
+    switch (currentMeasurement.type) {
+      case 'linear':
+        return 'Linear measurements (1D) scale as LBM^0.33, BSA^0.5, Height^1.0';
+      case 'area':
+        return 'Area measurements (2D) scale as LBM^0.67, BSA^1.0, Height^2.0';
+      case 'mass':
+        return 'Mass measurements (3D) scale as LBM^1.0, BSA^1.5, Height^2.1 (empirical vs theoretical 3.0)';
+      case 'volume':
+        return 'Volume measurements (3D) scale as LBM^1.0, BSA^1.5, Height^2.1 (empirical vs theoretical 3.0)';
+      default:
+        return 'Measurement type scaling relationships';
     }
   };
 
@@ -264,73 +298,88 @@ const MultiExponentScalingExplorer = () => {
       </div>
       
       {/* Configuration Panel */}
-      <div className="bg-gray-50 p-6 rounded-lg mb-6 grid lg:grid-cols-3 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Cardiac Measurement
-          </label>
-          <select
-            value={selectedMeasurement}
-            onChange={(e) => setSelectedMeasurement(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {MEASUREMENTS.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.type})
-              </option>
-            ))}
-          </select>
-          <div className="mt-1 text-xs text-gray-500">
-            Expected exponents: BSA^{getExpectedExponents(currentMeasurement.type).bsa}, 
-            LBM^{getExpectedExponents(currentMeasurement.type).lbm}, 
-            Height^{getExpectedExponents(currentMeasurement.type).height}
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            BSA Formula ({AVAILABLE_BSA_FORMULAS.length} available)
-          </label>
-          <select
-            value={selectedBSAFormula}
-            onChange={(e) => setSelectedBSAFormula(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {AVAILABLE_BSA_FORMULAS.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-          <div className="mt-1 text-xs text-gray-500">
-            {selectedBSAFormulaInfo.year} • Male: {bsaValues.male.toFixed(2)} m², Female: {bsaValues.female.toFixed(2)} m²
-          </div>
-          {selectedBSAFormulaInfo.notes && (
-            <div className="mt-1 text-xs text-blue-600">
-              {selectedBSAFormulaInfo.notes}
+      <div className="bg-gray-50 p-6 rounded-lg mb-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cardiac Measurement ({availableMeasurements.length} available)
+            </label>
+            <select
+              value={selectedMeasurement}
+              onChange={(e) => setSelectedMeasurement(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {/* Group measurements by type */}
+              {(['linear', 'area', 'mass', 'volume'] as MeasurementType[]).map(type => {
+                const measurementsOfType = availableMeasurements.filter(m => m.type === type);
+                if (measurementsOfType.length === 0) return null;
+                
+                return (
+                  <optgroup key={type} label={`${type.charAt(0).toUpperCase() + type.slice(1)} Measurements`}>
+                    {measurementsOfType.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.unit})
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+            <div className="mt-1 text-xs text-gray-500">
+              Expected exponents: BSA^{getExpectedExponents(currentMeasurement.type).bsa}, 
+              LBM^{getExpectedExponents(currentMeasurement.type).lbm}, 
+              Height^{getExpectedExponents(currentMeasurement.type).height}
             </div>
-          )}
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            LBM Formula ({AVAILABLE_LBM_FORMULAS.length} available)
-          </label>
-          <select
-            value={selectedLBMFormula}
-            onChange={(e) => setSelectedLBMFormula(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {AVAILABLE_LBM_FORMULAS.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-          <div className="mt-1 text-xs text-gray-500">
-            {selectedLBMFormulaInfo.year} • Male: {lbmValues.male.toFixed(1)} kg, Female: {lbmValues.female.toFixed(1)} kg
-          </div>
-          {selectedLBMFormulaInfo.notes && (
             <div className="mt-1 text-xs text-blue-600">
-              {selectedLBMFormulaInfo.notes}
+              Data source: MESA Study (Strom et al. 2024)
             </div>
-          )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              BSA Formula ({AVAILABLE_BSA_FORMULAS.length} available)
+            </label>
+            <select
+              value={selectedBSAFormula}
+              onChange={(e) => setSelectedBSAFormula(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {AVAILABLE_BSA_FORMULAS.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+            <div className="mt-1 text-xs text-gray-500">
+              {selectedBSAFormulaInfo.year} • Male: {bsaValues.male.toFixed(2)} m², Female: {bsaValues.female.toFixed(2)} m²
+            </div>
+            {selectedBSAFormulaInfo.notes && (
+              <div className="mt-1 text-xs text-blue-600">
+                {selectedBSAFormulaInfo.notes}
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              LBM Formula ({AVAILABLE_LBM_FORMULAS.length} available)
+            </label>
+            <select
+              value={selectedLBMFormula}
+              onChange={(e) => setSelectedLBMFormula(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {AVAILABLE_LBM_FORMULAS.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+            <div className="mt-1 text-xs text-gray-500">
+              {selectedLBMFormulaInfo.year} • Male: {lbmValues.male.toFixed(1)} kg, Female: {lbmValues.female.toFixed(1)} kg
+            </div>
+            {selectedLBMFormulaInfo.notes && (
+              <div className="mt-1 text-xs text-blue-600">
+                {selectedLBMFormulaInfo.notes}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -398,7 +447,7 @@ const MultiExponentScalingExplorer = () => {
             >
               Ratiometric (1.0)
             </button>
-            {activeVariable === 'height' && currentMeasurement.type === 'mass_volume' && (
+            {activeVariable === 'height' && (currentMeasurement.type === 'mass' || currentMeasurement.type === 'volume') && (
               <>
                 <button
                   onClick={() => setExponents(prev => ({ ...prev, height: 3.0 }))}
@@ -416,9 +465,9 @@ const MultiExponentScalingExplorer = () => {
             )}
           </div>
           
-          {activeVariable === 'height' && currentMeasurement.type === 'mass_volume' && (
+          {activeVariable === 'height' && (currentMeasurement.type === 'mass' || currentMeasurement.type === 'volume') && (
             <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-              <strong>Height Exponent Mystery:</strong> Pure geometric scaling would suggest Height^3.0 for volumes/masses, 
+              <strong>Height Exponent Mystery:</strong> Pure geometric scaling would suggest Height^3.0 for {currentMeasurement.type}s, 
               but empirical studies find exponents around 1.6-2.7. This suggests cardiac size doesn't scale with 
               perfect geometric similarity - biology is more complex than simple scaling!
             </div>
@@ -558,14 +607,14 @@ const MultiExponentScalingExplorer = () => {
           </div>
         )}
         
-        {activeVariable === 'height' && currentMeasurement.type === 'mass_volume' && exponents.height > 2.8 && (
+        {activeVariable === 'height' && (currentMeasurement.type === 'mass' || currentMeasurement.type === 'volume') && exponents.height > 2.8 && (
           <div className="mt-3 p-3 bg-purple-100 border border-purple-300 rounded text-purple-700 text-sm">
             <strong>Geometric Scaling Breakdown:</strong> Height^{exponents.height.toFixed(1)} creates extreme male-female differences that don't match biological reality. 
-            This demonstrates why cardiac mass doesn't follow pure geometric scaling laws.
+            This demonstrates why cardiac {currentMeasurement.type} doesn't follow pure geometric scaling laws.
           </div>
         )}
         
-        {activeVariable === 'height' && currentMeasurement.type === 'mass_volume' && exponents.height > 1.8 && exponents.height < 2.3 && (
+        {activeVariable === 'height' && (currentMeasurement.type === 'mass' || currentMeasurement.type === 'volume') && exponents.height > 1.8 && exponents.height < 2.3 && (
           <div className="mt-3 p-3 bg-blue-100 border border-blue-300 rounded text-blue-700 text-sm">
             <strong>Empirical Sweet Spot:</strong> Height^{exponents.height.toFixed(1)} represents the empirically-derived scaling that best fits real cardiac data - 
             biological systems rarely follow perfect geometric similarity!
