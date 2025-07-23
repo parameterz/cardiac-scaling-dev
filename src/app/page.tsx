@@ -10,12 +10,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Ratiometric Scaling is an Anachronism
+              Interactive Laboratory for Cardiac Scaling Analysis
             </h1>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto mb-4">
-              In the era of precision medicine, we can sequence genomes and predict drug responses, 
-              yet we persist with century-old ratios that create systematic biases in cardiac assessment.
-            </p>
             <p className="text-lg text-blue-600 font-medium">
               Interactive demonstration of universal biological scaling vs. traditional BSA indexing
             </p>
