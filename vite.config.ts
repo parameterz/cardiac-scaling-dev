@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/cardiac-scaling-dev/', // Add this line!
   resolve: {
     alias: {
-      '@': '/src',
+      '@': new URL('./src', import.meta.url).pathname,
     },
   },
   optimizeDeps: {
