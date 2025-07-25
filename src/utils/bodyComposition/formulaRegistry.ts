@@ -55,8 +55,8 @@ const bsaCalculators = {
 
 // BSA formula metadata
 export const BSA_FORMULA_NAMES = {
-  dubois: 'Du Bois & Du Bois (1916)',
   mosteller: 'Mosteller (1987)',  
+  dubois: 'Du Bois & Du Bois (1916)',
   haycock: 'Haycock et al. (1978)',
   gehan: 'Gehan & George (1970)',
   boyd: 'Boyd (1935)',
@@ -246,7 +246,7 @@ export interface FormulaInfo {
 
 export const BSA_FORMULA_INFO: FormulaInfo[] = [
   { id: 'dubois', name: 'Du Bois & Du Bois', year: 1916, parameters: ['weight', 'height'], notes: 'Most cited formula' },
-  { id: 'mosteller', name: 'Mosteller', year: 1987, parameters: ['weight', 'height'], notes: 'Simple and popular' },
+  { id: 'mosteller', name: 'Mosteller', year: 1987, parameters: ['weight', 'height'], notes: 'Default MESA formula' },
   { id: 'haycock', name: 'Haycock et al.', year: 1978, parameters: ['weight', 'height'], notes: 'Good for pediatrics' },
   { id: 'gehan', name: 'Gehan & George', year: 1970, parameters: ['weight', 'height'], notes: 'Cancer research focus' },
   { id: 'boyd', name: 'Boyd', year: 1935, parameters: ['weight', 'height'], notes: 'Complex logarithmic formula' },

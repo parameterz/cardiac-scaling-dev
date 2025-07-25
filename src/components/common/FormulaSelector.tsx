@@ -334,7 +334,7 @@ export const FormulaValuesDisplay: React.FC<FormulaValuesDisplayProps> = ({
  * Custom hook for managing formula selection state
  */
 export const useFormulaSelection = (
-  initialBSA = 'dubois',
+  initialBSA = 'mosteller',
   initialLBM = 'boer',
   initialEthnicity = 'white',
   initialAge = 50
