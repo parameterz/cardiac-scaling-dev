@@ -243,34 +243,30 @@ const RatiometricVsBiological: React.FC = () => {
     return <div>Measurement not found</div>;
   }
   
-  // Calculate ratiometric comparison metrics using 95th percentile (consistent with LBM derivation)
+  // Calculate ratiometric comparison metrics using 95th percentile
   const ratiometricSlopeMale = measurement.male.bsa.mean + 1.65 * measurement.male.bsa.sd;
   const ratiometricSlopeFemale = measurement.female.bsa.mean + 1.65 * measurement.female.bsa.sd;
   const ratiometricDifference = Math.abs(ratiometricSlopeMale - ratiometricSlopeFemale);
   const ratiometricRelativeDiff = (ratiometricDifference / Math.max(ratiometricSlopeMale, ratiometricSlopeFemale)) * 100;
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 bg-white">
+    <div className="container">
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Ratiometric vs. Biological Scaling
-        </h2>
-        <p className="text-gray-600">
-          Straight lines show traditional BSA indexing. Curved lines show universal biological scaling.
-        </p>
-      </div>
+      <header>
+        <hgroup>
+          <h2>Ratiometric vs. Biological Scaling</h2>
+          <p>Straight lines show traditional BSA indexing. Curved lines show universal biological scaling.</p>
+        </hgroup>
+      </header>
       
       {/* Controls */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6 grid md:grid-cols-4 gap-4">
+      <section className="controls-grid">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Measurement
-          </label>
+          <label htmlFor="measurement-select">Measurement</label>
           <select
+            id="measurement-select"
             value={selectedMeasurementId}
             onChange={(e) => setSelectedMeasurementId(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
           >
             {STROM_MEASUREMENTS.map(m => (
               <option key={m.id} value={m.id}>
@@ -278,19 +274,17 @@ const RatiometricVsBiological: React.FC = () => {
               </option>
             ))}
           </select>
-          <div className="mt-1 text-xs text-gray-500">
+          <div className="formula-info">
             Expected: LBM^{transparencyData.expectedExponent}
           </div>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            BSA Formula
-          </label>
+          <label htmlFor="bsa-formula">BSA Formula</label>
           <select
+            id="bsa-formula"
             value={bsaFormula}
             onChange={(e) => setBsaFormula(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
           >
             <option value="dubois">Du Bois (1916)</option>
             <option value="mosteller">Mosteller (1987)</option>
@@ -299,13 +293,11 @@ const RatiometricVsBiological: React.FC = () => {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            LBM Formula
-          </label>
+          <label htmlFor="lbm-formula">LBM Formula</label>
           <select
+            id="lbm-formula"
             value={lbmFormula}
             onChange={(e) => setLbmFormula(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
           >
             <option value="boer">Boer (1984)</option>
             <option value="hume">Hume (1971)</option>
@@ -313,185 +305,177 @@ const RatiometricVsBiological: React.FC = () => {
           </select>
         </div>
         
-        <div className="flex items-end">
+        <div style={{ display: 'flex', alignItems: 'end' }}>
           <button
             onClick={() => setShowTransparency(!showTransparency)}
-            className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              showTransparency
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-            }`}
+            role="button"
+            className={showTransparency ? '' : 'secondary'}
           >
             {showTransparency ? 'Hide' : 'Show'} Transparency
           </button>
         </div>
-      </div>
+      </section>
       
       {/* Universal Coefficient Summary */}
-      <div className="bg-green-50 p-4 rounded-lg mb-6 border border-green-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-green-900">
-              Universal LBM Coefficient
-            </h3>
-            <p className="text-sm text-green-700">
-              {formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-green-800">
-              {transparencyData.similarity.percentage.toFixed(1)}%
-            </div>
-            <div className="text-xs text-green-600">Sex Similarity</div>
+      <section className="universal-coefficient">
+        <div>
+          <h3 style={{ margin: 0 }}>Universal LBM Coefficient</h3>
+          <div className="coefficient-value">
+            {formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}
           </div>
         </div>
-      </div>
+        <div className="similarity-score">
+          <div className="similarity-value">
+            {transparencyData.similarity.percentage.toFixed(1)}%
+          </div>
+          <small>Sex Similarity</small>
+        </div>
+      </section>
       
       {/* Transparency Panel */}
       {showTransparency && (
-        <div className="bg-blue-50 p-6 rounded-lg mb-6 border border-blue-200">
-          <h3 className="text-xl font-bold text-blue-900 mb-4">
-            🔍 Full Transparency: Universal Coefficient Genesis
-          </h3>
-          <p className="text-sm text-blue-800 mb-4">
-            This is the complete step-by-step calculation of how we derive the universal LBM coefficient 
-            using the Dewey methodology. Every number is shown so you can verify the math.
-          </p>
+        <section className="transparency-panel">
+          <hgroup>
+            <h3>🔍 Full Transparency: Universal Coefficient Genesis</h3>
+            <p>
+              This is the complete step-by-step calculation of how we derive the universal LBM coefficient 
+              using the Dewey methodology. Every number is shown so you can verify the math.
+            </p>
+          </hgroup>
           
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="metrics-grid">
             {/* Step 1: Reference Populations */}
-            <div className="bg-white p-4 rounded border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3">
-                Step 1: Reference Populations
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
+            <article>
+              <header>
+                <h4>Step 1: Reference Populations</h4>
+              </header>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <div className="font-medium text-blue-800 mb-2">Male Reference</div>
-                  <div className="space-y-1">
-                    <div>Height: {transparencyData.referencePopulations.male.height} cm</div>
-                    <div>Weight: {transparencyData.referencePopulations.male.weight.toFixed(1)} kg</div>
-                    <div>BMI: {transparencyData.referencePopulations.male.bmi.toFixed(1)} kg/m²</div>
-                    <div className="pt-1 border-t border-gray-200">
-                      <div>BSA: {transparencyData.referencePopulations.male.bsa.toFixed(3)} m²</div>
-                      <div>LBM: {transparencyData.referencePopulations.male.lbm.toFixed(1)} kg</div>
-                    </div>
-                  </div>
+                  <h5>Male Reference</h5>
+                  <dl>
+                    <dt>Height:</dt><dd>{transparencyData.referencePopulations.male.height} cm</dd>
+                    <dt>Weight:</dt><dd>{transparencyData.referencePopulations.male.weight.toFixed(1)} kg</dd>
+                    <dt>BMI:</dt><dd>{transparencyData.referencePopulations.male.bmi.toFixed(1)} kg/m²</dd>
+                    <dt>BSA:</dt><dd>{transparencyData.referencePopulations.male.bsa.toFixed(3)} m²</dd>
+                    <dt>LBM:</dt><dd>{transparencyData.referencePopulations.male.lbm.toFixed(1)} kg</dd>
+                  </dl>
                 </div>
                 <div>
-                  <div className="font-medium text-pink-800 mb-2">Female Reference</div>
-                  <div className="space-y-1">
-                    <div>Height: {transparencyData.referencePopulations.female.height} cm</div>
-                    <div>Weight: {transparencyData.referencePopulations.female.weight.toFixed(1)} kg</div>
-                    <div>BMI: {transparencyData.referencePopulations.female.bmi.toFixed(1)} kg/m²</div>
-                    <div className="pt-1 border-t border-gray-200">
-                      <div>BSA: {transparencyData.referencePopulations.female.bsa.toFixed(3)} m²</div>
-                      <div>LBM: {transparencyData.referencePopulations.female.lbm.toFixed(1)} kg</div>
-                    </div>
-                  </div>
+                  <h5>Female Reference</h5>
+                  <dl>
+                    <dt>Height:</dt><dd>{transparencyData.referencePopulations.female.height} cm</dd>
+                    <dt>Weight:</dt><dd>{transparencyData.referencePopulations.female.weight.toFixed(1)} kg</dd>
+                    <dt>BMI:</dt><dd>{transparencyData.referencePopulations.female.bmi.toFixed(1)} kg/m²</dd>
+                    <dt>BSA:</dt><dd>{transparencyData.referencePopulations.female.bsa.toFixed(3)} m²</dd>
+                    <dt>LBM:</dt><dd>{transparencyData.referencePopulations.female.lbm.toFixed(1)} kg</dd>
+                  </dl>
                 </div>
               </div>
-            </div>
+            </article>
             
             {/* Step 2: Back-Calculated Absolutes */}
-            <div className="bg-white p-4 rounded border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3">
-                Step 2: Back-Calculated Absolute Values
-              </h4>
-              <div className="text-xs space-y-3">
-                <div>
-                  <div className="font-medium text-gray-700 mb-1">Published Reference (95th percentile):</div>
-                  <div>Male: {(measurement.male.bsa.mean + 1.65 * measurement.male.bsa.sd).toFixed(3)} {measurement.getIndexedUnit('bsa')}</div>
-                  <div>Female: {(measurement.female.bsa.mean + 1.65 * measurement.female.bsa.sd).toFixed(3)} {measurement.getIndexedUnit('bsa')}</div>
-                </div>
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="font-medium text-gray-700 mb-1">Calculated Absolute Values:</div>
-                  <div>Male: {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} {measurement.absoluteUnit}</div>
-                  <div>Female: {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} {measurement.absoluteUnit}</div>
-                </div>
+            <article>
+              <header>
+                <h4>Step 2: Back-Calculated Absolute Values</h4>
+              </header>
+              <div>
+                <h5>Published Reference (95th percentile):</h5>
+                <dl>
+                  <dt>Male:</dt>
+                  <dd className="coefficient-display">
+                    {(measurement.male.bsa.mean + 1.65 * measurement.male.bsa.sd).toFixed(3)} {measurement.getIndexedUnit('bsa')}
+                  </dd>
+                  <dt>Female:</dt>
+                  <dd className="coefficient-display">
+                    {(measurement.female.bsa.mean + 1.65 * measurement.female.bsa.sd).toFixed(3)} {measurement.getIndexedUnit('bsa')}
+                  </dd>
+                </dl>
+                
+                <h5>Calculated Absolute Values:</h5>
+                <dl>
+                  <dt>Male:</dt>
+                  <dd className="coefficient-display">
+                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} {measurement.absoluteUnit}
+                  </dd>
+                  <dt>Female:</dt>
+                  <dd className="coefficient-display">
+                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} {measurement.absoluteUnit}
+                  </dd>
+                </dl>
               </div>
-            </div>
+            </article>
             
             {/* Step 3: Individual LBM Coefficients */}
-            <div className="bg-white p-4 rounded border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3">
-                Step 3: Individual LBM Coefficients
-              </h4>
-              <div className="text-xs space-y-3">
-                <div className="font-mono text-gray-600 text-center p-2 bg-gray-50 rounded">
-                  Coefficient = Absolute ÷ LBM^{transparencyData.expectedExponent}
-                </div>
-                <div>
-                  <div className="font-medium text-blue-700 mb-1">Male Coefficient:</div>
-                  <div className="font-mono">
-                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.male.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}
-                  </div>
-                </div>
-                <div>
-                  <div className="font-medium text-pink-700 mb-1">Female Coefficient:</div>
-                  <div className="font-mono">
-                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.female.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}
-                  </div>
-                </div>
+            <article>
+              <header>
+                <h4>Step 3: Individual LBM Coefficients</h4>
+              </header>
+              <div style={{ textAlign: 'center', padding: '1rem', background: 'var(--pico-code-background-color)', borderRadius: 'var(--pico-border-radius)', marginBottom: '1rem' }}>
+                <code>Coefficient = Absolute ÷ LBM^{transparencyData.expectedExponent}</code>
               </div>
-            </div>
+              <div>
+                <h5>Male Coefficient:</h5>
+                <code style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.male.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}
+                </code>
+                
+                <h5>Female Coefficient:</h5>
+                <code style={{ display: 'block' }}>
+                  {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.female.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}
+                </code>
+              </div>
+            </article>
             
             {/* Step 4: Universal Coefficient */}
-            <div className="bg-white p-4 rounded border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-3">
-                Step 4: Universal Coefficient
-              </h4>
-              <div className="text-xs space-y-3">
-                <div className="font-mono text-gray-600 text-center p-2 bg-gray-50 rounded">
-                  Universal = (Male + Female) ÷ 2
-                </div>
-                <div>
-                  <div className="font-mono text-center">
-                    ({formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)} + {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}) ÷ 2
-                  </div>
-                  <div className="font-mono text-center font-bold text-green-700 text-lg mt-2">
-                    = {formatCoefficient(transparencyData.universalCoefficient, measurement.type)}
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="flex justify-between">
-                    <span>Absolute difference:</span>
-                    <span className="font-mono">{formatCoefficient(transparencyData.similarity.absolute, measurement.type)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Similarity:</span>
-                    <span className="font-bold text-green-700">{transparencyData.similarity.percentage.toFixed(1)}%</span>
-                  </div>
-                </div>
+            <article>
+              <header>
+                <h4>Step 4: Universal Coefficient</h4>
+              </header>
+              <div style={{ textAlign: 'center', padding: '1rem', background: 'var(--pico-code-background-color)', borderRadius: 'var(--pico-border-radius)', marginBottom: '1rem' }}>
+                <code>Universal = (Male + Female) ÷ 2</code>
               </div>
-            </div>
+              <div style={{ textAlign: 'center' }}>
+                <code style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  ({formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)} + {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}) ÷ 2
+                </code>
+                <div className="coefficient-display" style={{ fontSize: '1.25rem', padding: '0.75rem 1.5rem' }}>
+                  = {formatCoefficient(transparencyData.universalCoefficient, measurement.type)}
+                </div>
+                
+                <dl style={{ marginTop: '1rem' }}>
+                  <dt>Absolute difference:</dt>
+                  <dd className="coefficient-display">{formatCoefficient(transparencyData.similarity.absolute, measurement.type)}</dd>
+                  <dt>Similarity:</dt>
+                  <dd className="status-excellent">{transparencyData.similarity.percentage.toFixed(1)}%</dd>
+                </dl>
+              </div>
+            </article>
           </div>
           
-          <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded text-sm text-green-700">
+          <div className="insight-success">
             <strong>Validation:</strong> High similarity ({transparencyData.similarity.percentage.toFixed(1)}%) between 
             male and female LBM coefficients supports the hypothesis that biological scaling relationships 
             are universal across sexes when properly normalized.
           </div>
-        </div>
+        </section>
       )}
       
       {/* Chart */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {measurement.name} vs Body Surface Area
-          </h3>
-          <p className="text-sm text-gray-600">
-            Universal LBM Coefficient: {formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}
+      <section className="chart-container">
+        <header>
+          <h3>{measurement.name} vs Body Surface Area</h3>
+          <p>
+            Universal LBM Coefficient: <span className="coefficient-display">{formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}</span>
             <br />
-            <span className="text-xs text-gray-500">
+            <small style={{ color: 'var(--pico-muted-color)' }}>
               Both approaches use 95th percentile reference points for fair comparison. Biological curves shown for realistic population range (BSA 1.0-3.2 m², heights 120-220cm).
-            </span>
+            </small>
           </p>
-        </div>
+        </header>
         
         <ResponsiveContainer width="100%" height={500}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--pico-border-color)" opacity={0.5} />
             <XAxis 
               dataKey="bsa"
               type="number"
@@ -524,11 +508,10 @@ const RatiometricVsBiological: React.FC = () => {
             {/* Biological curves (curved) - THICK SOLID LINES */}
             <Line 
               dataKey="biologicalMale" 
-              stroke="#2563eb" 
+              stroke="#3b82f6" 
               strokeWidth={4}
               dot={false}
               name={`Biological Male (LBM^${transparencyData.expectedExponent})`}
-              strokeDasharray="none"
               connectNulls={false}
             />
             <Line 
@@ -537,7 +520,6 @@ const RatiometricVsBiological: React.FC = () => {
               strokeWidth={4}
               dot={false}
               name={`Biological Female (LBM^${transparencyData.expectedExponent})`}
-              strokeDasharray="none"
               connectNulls={false}
             />
             
@@ -560,13 +542,13 @@ const RatiometricVsBiological: React.FC = () => {
             />
             
             {/* Reference lines */}
-            <ReferenceLine x={0} stroke="#374151" strokeWidth={1} />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <ReferenceLine x={0} stroke="var(--pico-muted-color)" strokeWidth={1} />
+            <ReferenceLine y={0} stroke="var(--pico-muted-color)" strokeWidth={1} />
             
             {/* Reference population markers */}
             <ReferenceLine 
               x={transparencyData.referencePopulations.male.bsa} 
-              stroke="#2563eb" 
+              stroke="#3b82f6" 
               strokeWidth={1} 
               strokeDasharray="2 2"
               label={{ value: "♂ Ref", position: "top", style: { fontSize: '12px' } }}
@@ -580,71 +562,55 @@ const RatiometricVsBiological: React.FC = () => {
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </section>
       
       {/* Analysis Grid */}
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <h3 className="text-lg font-semibold text-red-900 mb-3">
-            Ratiometric Scaling Issues
-          </h3>
-          <div className="space-y-2 text-sm text-red-800">
-            <div className="flex justify-between">
-              <span>Male slope (95th percentile):</span>
-              <span className="font-mono">{ratiometricSlopeMale.toFixed(3)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Female slope (95th percentile):</span>
-              <span className="font-mono">{ratiometricSlopeFemale.toFixed(3)}</span>
-            </div>
-            <div className="pt-2 border-t border-red-200">
-              <div className="flex justify-between">
-                <span>Sex difference:</span>
-                <span className="font-bold text-red-700">{ratiometricRelativeDiff.toFixed(1)}%</span>
-              </div>
-              <div className="text-xs mt-1 text-red-600">
-                Artificial mathematical artifact (same reference points as biological curves)
-              </div>
-            </div>
-          </div>
-        </div>
+      <section className="metrics-grid">
+        <article className="insight-danger">
+          <header>
+            <h3>Ratiometric Scaling Issues</h3>
+          </header>
+          <dl>
+            <dt>Male slope (95th percentile):</dt>
+            <dd className="coefficient-display">{ratiometricSlopeMale.toFixed(3)}</dd>
+            <dt>Female slope (95th percentile):</dt>
+            <dd className="coefficient-display">{ratiometricSlopeFemale.toFixed(3)}</dd>
+            <dt>Sex difference:</dt>
+            <dd className="status-error">{ratiometricRelativeDiff.toFixed(1)}%</dd>
+          </dl>
+          <small style={{ color: 'var(--pico-muted-color)' }}>
+            Artificial mathematical artifact (same reference points as biological curves)
+          </small>
+        </article>
         
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <h3 className="text-lg font-semibold text-green-900 mb-3">
-            Biological Scaling Truth
-          </h3>
-          <div className="space-y-2 text-sm text-green-800">
-            <div className="flex justify-between">
-              <span>Universal coefficient:</span>
-              <span className="font-mono">{formatCoefficient(transparencyData.universalCoefficient, measurement.type)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Male coefficient:</span>
-              <span className="font-mono">{formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Female coefficient:</span>
-              <span className="font-mono">{formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}</span>
-            </div>
-            <div className="pt-2 border-t border-green-200">
-              <div className="flex justify-between">
-                <span>Sex similarity:</span>
-                <span className="font-bold text-green-700">{transparencyData.similarity.percentage.toFixed(1)}%</span>
-              </div>
-              <div className="text-xs mt-1 text-green-600">
-                Universal biology revealed
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <article className="insight-success">
+          <header>
+            <h3>Biological Scaling Truth</h3>
+          </header>
+          <dl>
+            <dt>Universal coefficient:</dt>
+            <dd className="coefficient-display">{formatCoefficient(transparencyData.universalCoefficient, measurement.type)}</dd>
+            <dt>Male coefficient:</dt>
+            <dd className="coefficient-display">{formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}</dd>
+            <dt>Female coefficient:</dt>
+            <dd className="coefficient-display">{formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}</dd>
+            <dt>Sex similarity:</dt>
+            <dd className="status-excellent">{transparencyData.similarity.percentage.toFixed(1)}%</dd>
+          </dl>
+          <small style={{ color: 'var(--pico-muted-color)' }}>
+            Universal biology revealed
+          </small>
+        </article>
+      </section>
       
       {/* Legend and Insight */}
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h3 className="text-lg font-semibold text-blue-900 mb-3">Key Insights</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="text-sm text-blue-800">
-            <p className="mb-2">
+      <section className="insight-success">
+        <header>
+          <h3>Key Insights</h3>
+        </header>
+        <div className="metrics-grid">
+          <div>
+            <p>
               <strong>Curved biological lines</strong> (thick solid) represent universal scaling relationships 
               derived from actual population data, showing natural convergence between sexes.
             </p>
@@ -653,28 +619,29 @@ const RatiometricVsBiological: React.FC = () => {
               that can extend to any value but create artificial sex differences.
             </p>
           </div>
-          <div className="bg-white p-3 rounded border border-blue-200">
-            <div className="text-xs text-blue-700 space-y-1">
-              <div className="flex items-center">
-                <div className="w-6 h-1 bg-blue-600 mr-2"></div>
-                <span>Male biological (LBM^{transparencyData.expectedExponent})</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-6 h-1 bg-red-600 mr-2"></div>
-                <span>Female biological (LBM^{transparencyData.expectedExponent})</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-6 h-0.5 bg-blue-400 border-dashed mr-2" style={{borderTopStyle: 'dashed', borderTopWidth: '1px'}}></div>
-                <span>Male ratiometric (95th percentile)</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-6 h-0.5 bg-red-400 border-dashed mr-2" style={{borderTopStyle: 'dashed', borderTopWidth: '1px'}}></div>
-                <span>Female ratiometric (95th percentile)</span>
-              </div>
-            </div>
+          <div style={{ background: 'var(--pico-card-background-color)', padding: '1rem', borderRadius: 'var(--pico-border-radius)', border: '1px solid var(--pico-border-color)' }}>
+            <h4>Legend</h4>
+            <dl style={{ fontSize: '0.875rem' }}>
+              <dt style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#3b82f6', marginRight: '0.5rem' }}></div>
+                Male biological (LBM^{transparencyData.expectedExponent})
+              </dt>
+              <dt style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#dc2626', marginRight: '0.5rem' }}></div>
+                Female biological (LBM^{transparencyData.expectedExponent})
+              </dt>
+              <dt style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#60a5fa', marginRight: '0.5rem', borderTop: '2px dashed #60a5fa' }}></div>
+                Male ratiometric (95th percentile)
+              </dt>
+              <dt style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#f87171', marginRight: '0.5rem', borderTop: '2px dashed #f87171' }}></div>
+                Female ratiometric (95th percentile)
+              </dt>
+            </dl>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
