@@ -15,19 +15,14 @@ export const BUILD_DATE = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 
  */
 export const VERSION_HISTORY = [
   {
-    version: '0.1.0',
+    version: '0.1.1',
     date: '2025-07-24',
     changes: [
-      'Initial release with Vite migration',
-      'Ratiometric vs Biological scaling comparison',
-      'Multi-exponent scaling explorer',
-      'MESA study data integration (16 measurements)',
-      'Comprehensive BSA and LBM formula registry',
-      'Interactive transparency calculations',
-      'Getting started guide and documentation'
+      'PICo CSS integration for improved styling',
+      'Updated home page content',
     ],
     breakingChanges: [],
-    notes: 'First stable release of the cardiac scaling analysis platform'
+    notes: 'uniform styling across components',
   }
 ] as const;
 
