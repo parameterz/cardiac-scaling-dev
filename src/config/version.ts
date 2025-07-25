@@ -5,7 +5,7 @@
  * Centralized version management for the Cardiac Scaling Analysis Laboratory
  */
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.1.2';
 export const APP_NAME = 'Cardiac Scaling Analysis Laboratory';
 export const COPYRIGHT_YEAR = '2025';
 export const BUILD_DATE = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -15,14 +15,13 @@ export const BUILD_DATE = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 
  */
 export const VERSION_HISTORY = [
   {
-    version: '0.1.1',
+    version: '0.1.2',
     date: '2025-07-24',
     changes: [
-      'PICo CSS integration for improved styling',
-      'Updated home page content',
+      'adds new BSA/LBM equations',
     ],
     breakingChanges: [],
-    notes: 'uniform styling across components',
+    notes: 'implements full suite of BSA/LBM equations for comprehensive scaling analysis',
   }
 ] as const;
 
