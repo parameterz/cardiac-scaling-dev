@@ -118,7 +118,7 @@ function App() {
 
                   <h4>Methodology</h4>
                   <p>
-                    We implement the Dewey methodology for coefficient
+                    We implement the "Dewey methodology" for coefficient
                     derivation, which back-calculates absolute measurement
                     values from published indexed references, then derives
                     universal LBM coefficients that work across sexes.

@@ -10,8 +10,15 @@ import { getReferencePopulation, type PopulationCharacteristics } from '@/data/p
 import { getScalingExponents } from '@/data/scalingLaws';
 import { calculateBSA, calculateLBM } from '@/utils/bodyComposition/formulaRegistry';
 
+// Import the new FormulaSelector component
+import FormulaSelector, { 
+  useFormulaSelection, 
+  FormulaValuesDisplay,
+  type FormulaSelectionState 
+} from '@/components/common/FormulaSelector';
+
 // =============================================================================
-// TRANSPARENCY CALCULATIONS
+// TRANSPARENCY CALCULATIONS (Updated to use FormulaSelectionState)
 // =============================================================================
 
 interface TransparencyData {
@@ -41,8 +48,7 @@ interface TransparencyData {
  */
 const calculateTransparencyData = (
   measurement: EnhancedMeasurementData,
-  bsaFormula: string,
-  lbmFormula: string
+  formulaSelection: FormulaSelectionState
 ): TransparencyData => {
   const expectedExponent = getScalingExponents(measurement.type).lbm;
   
@@ -52,14 +58,28 @@ const calculateTransparencyData = (
   
   const malePopulation = {
     ...maleRef,
-    bsa: calculateBSA(bsaFormula, maleRef.weight, maleRef.height),
-    lbm: calculateLBM(lbmFormula, maleRef.weight, maleRef.height, 'male')
+    bsa: calculateBSA(formulaSelection.bsaFormula, maleRef.weight, maleRef.height),
+    lbm: calculateLBM(
+      formulaSelection.lbmFormula, 
+      maleRef.weight, 
+      maleRef.height, 
+      'male', 
+      formulaSelection.age, 
+      formulaSelection.ethnicity
+    )
   };
   
   const femalePopulation = {
     ...femaleRef,
-    bsa: calculateBSA(bsaFormula, femaleRef.weight, femaleRef.height),
-    lbm: calculateLBM(lbmFormula, femaleRef.weight, femaleRef.height, 'female')
+    bsa: calculateBSA(formulaSelection.bsaFormula, femaleRef.weight, femaleRef.height),
+    lbm: calculateLBM(
+      formulaSelection.lbmFormula, 
+      femaleRef.weight, 
+      femaleRef.height, 
+      'female', 
+      formulaSelection.age, 
+      formulaSelection.ethnicity
+    )
   };
   
   // 2. Back-calculate absolute values from indexed references
@@ -106,7 +126,7 @@ const calculateTransparencyData = (
 };
 
 // =============================================================================
-// CHART DATA GENERATION
+// CHART DATA GENERATION (Updated to use FormulaSelectionState)
 // =============================================================================
 
 /**
@@ -116,8 +136,7 @@ const generateBiologicalDataset = (
   sex: Sex,
   universalCoefficient: number,
   expectedExponent: number,
-  bsaFormula: string,
-  lbmFormula: string
+  formulaSelection: FormulaSelectionState
 ) => {
   const data = [];
   const targetBMI = 24; // Fixed BMI for clean curves
@@ -125,8 +144,15 @@ const generateBiologicalDataset = (
   // Height range 120-220cm in 2cm steps
   for (let height = 120; height <= 220; height += 2) {
     const weight = targetBMI * Math.pow(height / 100, 2);
-    const bsa = calculateBSA(bsaFormula, weight, height);
-    const lbm = calculateLBM(lbmFormula, weight, height, sex);
+    const bsa = calculateBSA(formulaSelection.bsaFormula, weight, height);
+    const lbm = calculateLBM(
+      formulaSelection.lbmFormula, 
+      weight, 
+      height, 
+      sex, 
+      formulaSelection.age, 
+      formulaSelection.ethnicity
+    );
     const measurementValue = universalCoefficient * Math.pow(lbm, expectedExponent);
     
     data.push({
@@ -144,12 +170,15 @@ const generateBiologicalDataset = (
 /**
  * Generate chart data for visualization using clean datasets
  */
-const generateChartData = (transparencyData: TransparencyData, bsaFormula: string, lbmFormula: string) => {
+const generateChartData = (
+  transparencyData: TransparencyData, 
+  formulaSelection: FormulaSelectionState
+) => {
   const { universalCoefficient, expectedExponent, measurement } = transparencyData;
   
   // Generate clean biological datasets
-  const maleData = generateBiologicalDataset('male', universalCoefficient, expectedExponent, bsaFormula, lbmFormula);
-  const femaleData = generateBiologicalDataset('female', universalCoefficient, expectedExponent, bsaFormula, lbmFormula);
+  const maleData = generateBiologicalDataset('male', universalCoefficient, expectedExponent, formulaSelection);
+  const femaleData = generateBiologicalDataset('female', universalCoefficient, expectedExponent, formulaSelection);
   
   // Calculate 95th percentile slopes for ratiometric comparison
   const male95thPercentile = measurement.male.bsa.mean + 1.65 * measurement.male.bsa.sd;
@@ -217,29 +246,48 @@ const formatMeasurementValue = (value: number, unit: string): string => {
 const RatiometricVsBiological: React.FC = () => {
   // State
   const [selectedMeasurementId, setSelectedMeasurementId] = useState('lvdd');
-  const [bsaFormula, setBsaFormula] = useState('dubois');
-  const [lbmFormula, setLbmFormula] = useState('boer');
   const [showTransparency, setShowTransparency] = useState(false);
+  const [showFormulaDetails, setShowFormulaDetails] = useState(false);
+  
+  // Use the new formula selection hook
+  const { selection: formulaSelection, callbacks: formulaCallbacks } = useFormulaSelection();
   
   // Get current measurement
   const measurement = STROM_MEASUREMENTS.find(m => m.id === selectedMeasurementId);
   
   // Memoized calculations
-  const { transparencyData, chartData } = useMemo(() => {
+  const { transparencyData, chartData, referencePopulation } = useMemo(() => {
     if (!measurement) {
-      return { transparencyData: null, chartData: [] };
+      return { transparencyData: null, chartData: [], referencePopulation: null };
     }
     
-    const transparency = calculateTransparencyData(measurement, bsaFormula, lbmFormula);
-    const data = generateChartData(transparency, bsaFormula, lbmFormula);
+    const transparency = calculateTransparencyData(measurement, formulaSelection);
+    const data = generateChartData(transparency, formulaSelection);
+    
+    // Prepare reference population data for FormulaValuesDisplay
+    const refPop = {
+      male: {
+        height: transparency.referencePopulations.male.height,
+        weight: transparency.referencePopulations.male.weight,
+        bsa: transparency.referencePopulations.male.bsa,
+        lbm: transparency.referencePopulations.male.lbm
+      },
+      female: {
+        height: transparency.referencePopulations.female.height,
+        weight: transparency.referencePopulations.female.weight,
+        bsa: transparency.referencePopulations.female.bsa,
+        lbm: transparency.referencePopulations.female.lbm
+      }
+    };
     
     return {
       transparencyData: transparency,
-      chartData: data
+      chartData: data,
+      referencePopulation: refPop
     };
-  }, [measurement, bsaFormula, lbmFormula]);
+  }, [measurement, formulaSelection]);
   
-  if (!measurement || !transparencyData) {
+  if (!measurement || !transparencyData || !referencePopulation) {
     return <div>Measurement not found</div>;
   }
   
@@ -260,60 +308,62 @@ const RatiometricVsBiological: React.FC = () => {
       </header>
       
       {/* Controls */}
-      <section className="controls-grid">
-        <div>
-          <label htmlFor="measurement-select">Measurement</label>
-          <select
-            id="measurement-select"
-            value={selectedMeasurementId}
-            onChange={(e) => setSelectedMeasurementId(e.target.value)}
-          >
-            {STROM_MEASUREMENTS.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.type})
-              </option>
-            ))}
-          </select>
-          <div className="formula-info">
-            Expected: LBM^{transparencyData.expectedExponent}
+      <section>
+        <div className="controls-grid">
+          {/* Measurement Selection */}
+          <div>
+            <label htmlFor="measurement-select">Measurement</label>
+            <select
+              id="measurement-select"
+              value={selectedMeasurementId}
+              onChange={(e) => setSelectedMeasurementId(e.target.value)}
+            >
+              {STROM_MEASUREMENTS.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.type})
+                </option>
+              ))}
+            </select>
+            <div className="formula-info">
+              Expected: LBM^{transparencyData.expectedExponent}
+            </div>
+          </div>
+          
+          {/* Controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button
+              onClick={() => setShowTransparency(!showTransparency)}
+              role="button"
+              className={showTransparency ? '' : 'secondary'}
+            >
+              {showTransparency ? 'Hide' : 'Show'} Transparency
+            </button>
+            <button
+              onClick={() => setShowFormulaDetails(!showFormulaDetails)}
+              role="button"
+              className={showFormulaDetails ? '' : 'secondary'}
+            >
+              {showFormulaDetails ? 'Hide' : 'Show'} Formula Details
+            </button>
           </div>
         </div>
         
-        <div>
-          <label htmlFor="bsa-formula">BSA Formula</label>
-          <select
-            id="bsa-formula"
-            value={bsaFormula}
-            onChange={(e) => setBsaFormula(e.target.value)}
-          >
-            <option value="dubois">Du Bois (1916)</option>
-            <option value="mosteller">Mosteller (1987)</option>
-            <option value="haycock">Haycock (1978)</option>
-          </select>
-        </div>
+        {/* Formula Selection Component */}
+        <FormulaSelector
+          selection={formulaSelection}
+          callbacks={formulaCallbacks}
+          layout="grid"
+          className="mt-1"
+        />
         
-        <div>
-          <label htmlFor="lbm-formula">LBM Formula</label>
-          <select
-            id="lbm-formula"
-            value={lbmFormula}
-            onChange={(e) => setLbmFormula(e.target.value)}
-          >
-            <option value="boer">Boer (1984)</option>
-            <option value="hume">Hume (1971)</option>
-            <option value="yu">Yu (2013)</option>
-          </select>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'end' }}>
-          <button
-            onClick={() => setShowTransparency(!showTransparency)}
-            role="button"
-            className={showTransparency ? '' : 'secondary'}
-          >
-            {showTransparency ? 'Hide' : 'Show'} Transparency
-          </button>
-        </div>
+        {/* Formula Values Display */}
+        {showFormulaDetails && (
+          <FormulaValuesDisplay
+            selection={formulaSelection}
+            referencePopulation={referencePopulation}
+            showDetailed={true}
+          />
+        )}
       </section>
       
       {/* Universal Coefficient Summary */}
@@ -356,8 +406,8 @@ const RatiometricVsBiological: React.FC = () => {
                     <dt>Height:</dt><dd>{transparencyData.referencePopulations.male.height} cm</dd>
                     <dt>Weight:</dt><dd>{transparencyData.referencePopulations.male.weight.toFixed(1)} kg</dd>
                     <dt>BMI:</dt><dd>{transparencyData.referencePopulations.male.bmi.toFixed(1)} kg/m²</dd>
-                    <dt>BSA:</dt><dd>{transparencyData.referencePopulations.male.bsa.toFixed(3)} m²</dd>
-                    <dt>LBM:</dt><dd>{transparencyData.referencePopulations.male.lbm.toFixed(1)} kg</dd>
+                    <dt>BSA ({formulaSelection.bsaFormula}):</dt><dd>{transparencyData.referencePopulations.male.bsa.toFixed(3)} m²</dd>
+                    <dt>LBM ({formulaSelection.lbmFormula}):</dt><dd>{transparencyData.referencePopulations.male.lbm.toFixed(1)} kg</dd>
                   </dl>
                 </div>
                 <div>
@@ -366,11 +416,24 @@ const RatiometricVsBiological: React.FC = () => {
                     <dt>Height:</dt><dd>{transparencyData.referencePopulations.female.height} cm</dd>
                     <dt>Weight:</dt><dd>{transparencyData.referencePopulations.female.weight.toFixed(1)} kg</dd>
                     <dt>BMI:</dt><dd>{transparencyData.referencePopulations.female.bmi.toFixed(1)} kg/m²</dd>
-                    <dt>BSA:</dt><dd>{transparencyData.referencePopulations.female.bsa.toFixed(3)} m²</dd>
-                    <dt>LBM:</dt><dd>{transparencyData.referencePopulations.female.lbm.toFixed(1)} kg</dd>
+                    <dt>BSA ({formulaSelection.bsaFormula}):</dt><dd>{transparencyData.referencePopulations.female.bsa.toFixed(3)} m²</dd>
+                    <dt>LBM ({formulaSelection.lbmFormula}):</dt><dd>{transparencyData.referencePopulations.female.lbm.toFixed(1)} kg</dd>
                   </dl>
                 </div>
               </div>
+              
+              {/* Show additional parameters when using advanced formulas */}
+              {(formulaSelection.lbmFormula === 'lee' || formulaSelection.lbmFormula === 'yu') && (
+                <div className="insight-info">
+                  <strong>Additional Parameters:</strong>
+                  {formulaSelection.lbmFormula === 'lee' && (
+                    <span> Ethnicity: {formulaSelection.ethnicity}</span>
+                  )}
+                  {(formulaSelection.lbmFormula === 'lee' || formulaSelection.lbmFormula === 'yu') && (
+                    <span> Age: {formulaSelection.age} years</span>
+                  )}
+                </div>
+              )}
             </article>
             
             {/* Step 2: Back-Calculated Absolutes */}
@@ -469,6 +532,7 @@ const RatiometricVsBiological: React.FC = () => {
             <br />
             <small style={{ color: 'var(--pico-muted-color)' }}>
               Both approaches use 95th percentile reference points for fair comparison. Biological curves shown for realistic population range (BSA 1.0-3.2 m², heights 120-220cm).
+              Using {formulaSelection.bsaFormula.toUpperCase()} BSA and {formulaSelection.lbmFormula.toUpperCase()} LBM formulas.
             </small>
           </p>
         </header>
@@ -482,7 +546,7 @@ const RatiometricVsBiological: React.FC = () => {
               domain={[0, 3.5]}
               tickFormatter={(value) => value.toFixed(1)}
               label={{ 
-                value: 'Body Surface Area (m²)', 
+                value: `Body Surface Area (m²) - ${formulaSelection.bsaFormula.toUpperCase()}`, 
                 position: 'insideBottom', 
                 offset: -5 
               }}
@@ -502,7 +566,7 @@ const RatiometricVsBiological: React.FC = () => {
                   ? name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
                   : String(name)
               ]}
-              labelFormatter={(value) => `BSA: ${value?.toFixed(2)} m²`}
+              labelFormatter={(value) => `BSA: ${value?.toFixed(2)} m² (${formulaSelection.bsaFormula.toUpperCase()})`}
             />
             
             {/* Biological curves (curved) - THICK SOLID LINES */}
@@ -511,7 +575,7 @@ const RatiometricVsBiological: React.FC = () => {
               stroke="#3b82f6" 
               strokeWidth={4}
               dot={false}
-              name={`Biological Male (LBM^${transparencyData.expectedExponent})`}
+              name={`Biological Male (${formulaSelection.lbmFormula.toUpperCase()} LBM^${transparencyData.expectedExponent})`}
               connectNulls={false}
             />
             <Line 
@@ -519,7 +583,7 @@ const RatiometricVsBiological: React.FC = () => {
               stroke="#dc2626" 
               strokeWidth={4}
               dot={false}
-              name={`Biological Female (LBM^${transparencyData.expectedExponent})`}
+              name={`Biological Female (${formulaSelection.lbmFormula.toUpperCase()} LBM^${transparencyData.expectedExponent})`}
               connectNulls={false}
             />
             
@@ -529,7 +593,7 @@ const RatiometricVsBiological: React.FC = () => {
               stroke="#60a5fa" 
               strokeWidth={2}
               dot={false}
-              name="Ratiometric Male (BSA Linear)"
+              name={`Ratiometric Male (${formulaSelection.bsaFormula.toUpperCase()} BSA Linear)`}
               strokeDasharray="8 4"
             />
             <Line 
@@ -537,7 +601,7 @@ const RatiometricVsBiological: React.FC = () => {
               stroke="#f87171" 
               strokeWidth={2}
               dot={false}
-              name="Ratiometric Female (BSA Linear)"
+              name={`Ratiometric Female (${formulaSelection.bsaFormula.toUpperCase()} BSA Linear)`}
               strokeDasharray="8 4"
             />
             
@@ -598,7 +662,7 @@ const RatiometricVsBiological: React.FC = () => {
             <dd className="status-excellent">{transparencyData.similarity.percentage.toFixed(1)}%</dd>
           </dl>
           <small style={{ color: 'var(--pico-muted-color)' }}>
-            Universal biology revealed
+            Universal biology revealed using {formulaSelection.bsaFormula.toUpperCase()} + {formulaSelection.lbmFormula.toUpperCase()}
           </small>
         </article>
       </section>
@@ -612,11 +676,12 @@ const RatiometricVsBiological: React.FC = () => {
           <div>
             <p>
               <strong>Curved biological lines</strong> (thick solid) represent universal scaling relationships 
-              derived from actual population data, showing natural convergence between sexes.
+              derived from actual population data using {formulaSelection.lbmFormula.toUpperCase()} LBM calculations, 
+              showing natural convergence between sexes.
             </p>
             <p>
               <strong>Straight ratiometric lines</strong> (thin dashed) are mathematical extrapolations 
-              that can extend to any value but create artificial sex differences.
+              using {formulaSelection.bsaFormula.toUpperCase()} BSA indexing that can extend to any value but create artificial sex differences.
             </p>
           </div>
           <div style={{ background: 'var(--pico-card-background-color)', padding: '1rem', borderRadius: 'var(--pico-border-radius)', border: '1px solid var(--pico-border-color)' }}>
@@ -624,19 +689,19 @@ const RatiometricVsBiological: React.FC = () => {
             <dl style={{ fontSize: '0.875rem' }}>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#3b82f6', marginRight: '0.5rem' }}></div>
-                Male biological (LBM^{transparencyData.expectedExponent})
+                Male biological ({formulaSelection.lbmFormula.toUpperCase()} LBM^{transparencyData.expectedExponent})
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#dc2626', marginRight: '0.5rem' }}></div>
-                Female biological (LBM^{transparencyData.expectedExponent})
+                Female biological ({formulaSelection.lbmFormula.toUpperCase()} LBM^{transparencyData.expectedExponent})
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#60a5fa', marginRight: '0.5rem', borderTop: '2px dashed #60a5fa' }}></div>
-                Male ratiometric (95th percentile)
+                Male ratiometric ({formulaSelection.bsaFormula.toUpperCase()} BSA 95th percentile)
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#f87171', marginRight: '0.5rem', borderTop: '2px dashed #f87171' }}></div>
-                Female ratiometric (95th percentile)
+                Female ratiometric ({formulaSelection.bsaFormula.toUpperCase()} BSA 95th percentile)
               </dt>
             </dl>
           </div>
