@@ -55,22 +55,17 @@ function App() {
               <ul>
                 <li>
                   <strong>Ratiometric vs. Allometric Scaling:</strong> Compare
-                  traditional BSA indexing with lean body mass (LBM) based
-                  universal scaling laws
+                  traditional BSA indexing with allometric lean body mass (LBM) based
+                  scaling
                 </li>
                 <li>
-                  <strong>Universal Coefficients:</strong> See how male and
-                  female scaling coefficients converge when proper biological
-                  variables are used
+                  <strong>Clinical Relevance:</strong> Based on <a href="https://doi.org/10.1161/JAHA.123.034029" target="_blank" rel="noopener noreferrer">Strom et al. (2024)</a> and the Multi-Ethnic
+                  Study of Atherosclerosis (MESA) reference data 
                 </li>
                 <li>
                   <strong>Formula Transparency:</strong> Complete step-by-step
                   calculations using the "Dewey methodology" for coefficient
                   derivation
-                </li>
-                <li>
-                  <strong>Clinical Relevance:</strong> Based on the Multi-Ethnic
-                  Study of Atherosclerosis (MESA) reference data
                 </li>
               </ul>
 
@@ -92,7 +87,7 @@ function App() {
                 </p>
               
                 <footer>
-                  <cite>— Dewey et al., Circulation. 2008;117:2279-2287.</cite>
+                  <cite>— <a href="https://doi.org/10.1161/circulationaha.107.736785" target="_blank" rel="noopener noreferrer"> Dewey et al., (2008)</a></cite>
                 </footer>
               </blockquote>
 

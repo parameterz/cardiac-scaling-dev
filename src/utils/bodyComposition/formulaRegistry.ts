@@ -245,22 +245,22 @@ export interface FormulaInfo {
 }
 
 export const BSA_FORMULA_INFO: FormulaInfo[] = [
-  { id: 'dubois', name: 'Du Bois & Du Bois', year: 1916, parameters: ['weight', 'height'], notes: 'Most cited formula' },
-  { id: 'mosteller', name: 'Mosteller', year: 1987, parameters: ['weight', 'height'], notes: 'Default MESA formula' },
-  { id: 'haycock', name: 'Haycock et al.', year: 1978, parameters: ['weight', 'height'], notes: 'Good for pediatrics' },
-  { id: 'gehan', name: 'Gehan & George', year: 1970, parameters: ['weight', 'height'], notes: 'Cancer research focus' },
   { id: 'boyd', name: 'Boyd', year: 1935, parameters: ['weight', 'height'], notes: 'Complex logarithmic formula' },
   { id: 'dreyer', name: 'Dreyer', year: 1915, parameters: ['weight'], notes: 'Weight-only formula' },
-  { id: 'livingston', name: 'Livingston & Lee', year: 2001, parameters: ['weight'], notes: 'Modern weight-based' }
+  { id: 'dubois', name: 'Du Bois & Du Bois', year: 1916, parameters: ['weight', 'height'], notes: 'Most cited formula' },
+  { id: 'gehan', name: 'Gehan & George', year: 1970, parameters: ['weight', 'height'], notes: 'Cancer research focus' },
+  { id: 'haycock', name: 'Haycock et al.', year: 1978, parameters: ['weight', 'height'], notes: 'Good for pediatrics' },
+  { id: 'livingston', name: 'Livingston & Lee', year: 2001, parameters: ['weight'], notes: 'Modern weight-based' },
+  { id: 'mosteller', name: 'Mosteller', year: 1987, parameters: ['weight', 'height'], notes: 'Default MESA formula' },
 ];
 
 export const LBM_FORMULA_INFO: FormulaInfo[] = [
   { id: 'boer', name: 'Boer', year: 1984, parameters: ['weight', 'height', 'sex'], notes: 'Most commonly used' },
   { id: 'hume', name: 'Hume & Weyers', year: 1971, parameters: ['weight', 'height', 'sex'], notes: 'Classic formula' },
-  { id: 'yu', name: 'Yu et al.', year: 2013, parameters: ['weight', 'height', 'sex', 'age'], notes: 'Includes age and BMI' },
-  { id: 'lee', name: 'Lee et al.', year: 2017, parameters: ['weight', 'height', 'sex', 'age', 'ethnicity'], notes: 'Most comprehensive' },
+  { id: 'janmahasatian', name: 'Janmahasatian et al.', year: 2005, parameters: ['weight', 'height', 'sex'], notes: 'BMI-adjusted FFM' },
   { id: 'kuch', name: 'Kuch', year: 2001, parameters: ['weight', 'height', 'sex'], notes: 'Calculates FFM, not LBM' },
-  { id: 'janmahasatian', name: 'Janmahasatian et al.', year: 2005, parameters: ['weight', 'height', 'sex'], notes: 'BMI-adjusted FFM' }
+  { id: 'lee', name: 'Lee et al.', year: 2017, parameters: ['weight', 'height', 'sex', 'age', 'ethnicity'], notes: 'Most comprehensive' },
+  { id: 'yu', name: 'Yu et al.', year: 2013, parameters: ['weight', 'height', 'sex', 'age'], notes: 'Includes age and BMI' },
 ];
 
 // =============================================================================
