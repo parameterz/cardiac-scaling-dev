@@ -14,10 +14,9 @@ import FormulaSelector, {
   type FormulaSelectionState 
 } from '@/components/common/FormulaSelector';
 
-// 🚀 NEW: Import the DeweyMethodFactory
+// 🚀 NEW: Import the DeweyMethodFactory (Direct Format)
 import { 
-  generateQuickComparison, 
-  extractLegacyData,
+  generateQuickComparison,
   type DeweyMethodResult 
 } from './core/DeweyMethodFactory';
 
@@ -63,13 +62,11 @@ const RatiometricVsBiological: React.FC = () => {
   // Get current measurement
   const measurement = STROM_MEASUREMENTS.find(m => m.id === selectedMeasurementId);
   
-  // 🚀 NEW: Replace all inline calculations with DeweyMethodFactory
-  const { factoryResult, transparencyData, chartData, referencePopulation } = useMemo(() => {
+  // 🚀 NEW: Replace all inline calculations with DeweyMethodFactory (Direct Format)
+  const { factoryResult, referencePopulation } = useMemo(() => {
     if (!measurement) {
       return { 
         factoryResult: null, 
-        transparencyData: null, 
-        chartData: [], 
         referencePopulation: null 
       };
     }
@@ -88,10 +85,7 @@ const RatiometricVsBiological: React.FC = () => {
     
     console.log('✅ DeweyMethodFactory: Analysis complete');
     
-    // Extract legacy format for existing UI compatibility
-    const legacyData = extractLegacyData(result);
-    
-    // Prepare reference population data for FormulaValuesDisplay
+    // Use factory format directly - no more legacy translation!
     const refPop = {
       male: {
         height: result.referencePopulations.male.height,
@@ -109,19 +103,32 @@ const RatiometricVsBiological: React.FC = () => {
     
     return {
       factoryResult: result,
-      transparencyData: legacyData.transparencyData,
-      chartData: legacyData.chartData,
       referencePopulation: refPop
     };
   }, [measurement, formulaSelection]);
   
-  if (!measurement || !transparencyData || !referencePopulation || !factoryResult) {
+  if (!measurement || !referencePopulation || !factoryResult) {
     return <div>Measurement not found or factory error</div>;
   }
+
+  // 🚀 NEW: Extract data directly from factory result
+  const lbmConfig = factoryResult.configurations.find(c => c.id === 'allometric_lbm')!;
+  const ratiometricConfig = factoryResult.configurations.find(c => c.id === 'ratiometric_bsa')!;
+  const lbmCoefficients = factoryResult.coefficients.allometric_lbm;
+  const ratiometricCoefficients = factoryResult.coefficients.ratiometric_bsa;
+  
+  // Derived transparency data (no more legacy object)
+  const universalCoefficient = lbmCoefficients.universal!;
+  const expectedExponent = lbmConfig.exponent;
+  const similarity = lbmCoefficients.similarity;
+  
+  // Back-calculated absolutes for transparency
+  const maleAbsolute = lbmCoefficients.male * Math.pow(referencePopulation.male.lbm, expectedExponent);
+  const femaleAbsolute = lbmCoefficients.female * Math.pow(referencePopulation.female.lbm, expectedExponent);
   
   // Calculate ratiometric comparison metrics using 97.5th percentile
-  const ratiometricSlopeMale = measurement.male.bsa.mean + 1.96 * measurement.male.bsa.sd;
-  const ratiometricSlopeFemale = measurement.female.bsa.mean + 1.96 * measurement.female.bsa.sd;
+  const ratiometricSlopeMale = ratiometricCoefficients.male;
+  const ratiometricSlopeFemale = ratiometricCoefficients.female;
   const ratiometricDifference = Math.abs(ratiometricSlopeMale - ratiometricSlopeFemale);
   const ratiometricRelativeDiff = (ratiometricDifference / Math.max(ratiometricSlopeMale, ratiometricSlopeFemale)) * 100;
 
@@ -130,19 +137,9 @@ const RatiometricVsBiological: React.FC = () => {
       {/* Header */}
       <header>
         <hgroup>
-          <h2>Ratiometric vs. Biological Scaling</h2>
-          <p>Straight lines show traditional BSA indexing. Curved lines show universal biological scaling.</p>
+          <h2>Ratiometric vs. Allometric Scaling</h2>
+          <p>Ratiometric BSA lines show traditional indexing. Allometric LBM curves show universal biological scaling.</p>
         </hgroup>
-        
-        {/* 🚀 NEW: Factory Status Display */}
-        <div className="insight-info">
-          <small>
-            <strong>🔧 Engine Status:</strong> DeweyMethodFactory v1.0 • 
-            Configurations: {factoryResult.configurations.length} • 
-            Best: {factoryResult.insights.bestConfiguration} • 
-            Recommended: {factoryResult.insights.recommendedApproach}
-          </small>
-        </div>
       </header>
       
       {/* Controls */}
@@ -163,7 +160,7 @@ const RatiometricVsBiological: React.FC = () => {
               ))}
             </select>
             <div className="formula-info">
-              Expected: LBM^{transparencyData.expectedExponent}
+              Expected: LBM^{expectedExponent}
             </div>
             {/* 🚀 NEW: Factory Insights */}
             <div className="formula-notes">
@@ -187,15 +184,6 @@ const RatiometricVsBiological: React.FC = () => {
             >
               {showFormulaDetails ? 'Hide' : 'Show'} Formula Details
             </button>
-            {/* 🚀 NEW: Factory Debug */}
-            <button
-              onClick={() => console.log('Factory Result:', factoryResult)}
-              role="button"
-              className="secondary"
-              style={{ fontSize: '0.8rem' }}
-            >
-              🔍 Debug Factory
-            </button>
           </div>
         </div>
         
@@ -217,53 +205,19 @@ const RatiometricVsBiological: React.FC = () => {
         )}
       </section>
       
-      {/* Universal Coefficient Summary - Enhanced with Factory Data */}
+      {/* Universal Coefficient Summary */}
       <section className="universal-coefficient">
         <div>
           <h3 style={{ margin: 0 }}>Universal LBM Coefficient</h3>
           <div className="coefficient-value">
-            {formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}
+            {formatCoefficient(universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{expectedExponent}
           </div>
-          {/* 🚀 NEW: Factory Validation Metrics */}
-          <small style={{ display: 'block', marginTop: '0.5rem' }}>
-            R² = {factoryResult.validationMetrics.allometric_lbm?.rSquared.toFixed(3)} • 
-            Correlation = {factoryResult.validationMetrics.allometric_lbm?.correlation.toFixed(3)}
-          </small>
         </div>
         <div className="similarity-score">
           <div className="similarity-value">
-            {transparencyData.similarity.percentage.toFixed(1)}%
+            {similarity.percentage.toFixed(1)}%
           </div>
           <small>Sex Similarity</small>
-        </div>
-      </section>
-      
-      {/* 🚀 NEW: Factory Insights Panel */}
-      <section className="insight-success">
-        <h3>🤖 DeweyMethodFactory Insights</h3>
-        <div className="metrics-grid">
-          <div>
-            <h4>Configuration Analysis</h4>
-            <dl>
-              <dt>Best performing:</dt>
-              <dd className="coefficient-display">{factoryResult.insights.bestConfiguration}</dd>
-              <dt>Worst performing:</dt>
-              <dd className="coefficient-display">{factoryResult.insights.worstConfiguration}</dd>
-              <dt>Recommended:</dt>
-              <dd className="coefficient-display">{factoryResult.insights.recommendedApproach}</dd>
-            </dl>
-          </div>
-          <div>
-            <h4>Validation Scores</h4>
-            <dl>
-              <dt>LBM R²:</dt>
-              <dd className="status-excellent">{factoryResult.validationMetrics.allometric_lbm?.rSquared.toFixed(3)}</dd>
-              <dt>BSA R²:</dt>
-              <dd className="status-good">{factoryResult.validationMetrics.ratiometric_bsa?.rSquared.toFixed(3)}</dd>
-              <dt>Correlations found:</dt>
-              <dd className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</dd>
-            </dl>
-          </div>
         </div>
       </section>
       
@@ -343,11 +297,11 @@ const RatiometricVsBiological: React.FC = () => {
                 <dl>
                   <dt>Male:</dt>
                   <dd className="coefficient-display">
-                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} {measurement.absoluteUnit}
+                    {formatMeasurementValue(maleAbsolute, measurement.absoluteUnit)} {measurement.absoluteUnit}
                   </dd>
                   <dt>Female:</dt>
                   <dd className="coefficient-display">
-                    {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} {measurement.absoluteUnit}
+                    {formatMeasurementValue(femaleAbsolute, measurement.absoluteUnit)} {measurement.absoluteUnit}
                   </dd>
                 </dl>
               </div>
@@ -359,17 +313,17 @@ const RatiometricVsBiological: React.FC = () => {
                 <h4>Step 3: Individual LBM Coefficients</h4>
               </header>
               <div style={{ textAlign: 'center', padding: '1rem', background: 'var(--pico-code-background-color)', borderRadius: 'var(--pico-border-radius)', marginBottom: '1rem' }}>
-                <code>Coefficient = Absolute ÷ LBM^{transparencyData.expectedExponent}</code>
+                <code>Coefficient = Absolute ÷ LBM^{expectedExponent}</code>
               </div>
               <div>
                 <h5>Male Coefficient:</h5>
                 <code style={{ display: 'block', marginBottom: '0.5rem' }}>
-                  {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.male, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.male.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}
+                  {formatMeasurementValue(maleAbsolute, measurement.absoluteUnit)} ÷ {referencePopulation.male.lbm.toFixed(1)}^{expectedExponent} = {formatCoefficient(lbmCoefficients.male, measurement.type)}
                 </code>
                 
                 <h5>Female Coefficient:</h5>
                 <code style={{ display: 'block' }}>
-                  {formatMeasurementValue(transparencyData.backCalculatedAbsolutes.female, measurement.absoluteUnit)} ÷ {transparencyData.referencePopulations.female.lbm.toFixed(1)}^{transparencyData.expectedExponent} = {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}
+                  {formatMeasurementValue(femaleAbsolute, measurement.absoluteUnit)} ÷ {referencePopulation.female.lbm.toFixed(1)}^{expectedExponent} = {formatCoefficient(lbmCoefficients.female, measurement.type)}
                 </code>
               </div>
             </article>
@@ -384,29 +338,26 @@ const RatiometricVsBiological: React.FC = () => {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <code style={{ display: 'block', marginBottom: '0.5rem' }}>
-                  ({formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)} + {formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}) ÷ 2
+                  ({formatCoefficient(lbmCoefficients.male, measurement.type)} + {formatCoefficient(lbmCoefficients.female, measurement.type)}) ÷ 2
                 </code>
                 <div className="coefficient-display" style={{ fontSize: '1.25rem', padding: '0.75rem 1.5rem' }}>
-                  = {formatCoefficient(transparencyData.universalCoefficient, measurement.type)}
+                  = {formatCoefficient(universalCoefficient, measurement.type)}
                 </div>
                 
                 <dl style={{ marginTop: '1rem' }}>
                   <dt>Absolute difference:</dt>
-                  <dd className="coefficient-display">{formatCoefficient(transparencyData.similarity.absolute, measurement.type)}</dd>
+                  <dd className="coefficient-display">{formatCoefficient(similarity.absolute, measurement.type)}</dd>
                   <dt>Similarity:</dt>
-                  <dd className="status-excellent">{transparencyData.similarity.percentage.toFixed(1)}%</dd>
+                  <dd className="status-excellent">{similarity.percentage.toFixed(1)}%</dd>
                 </dl>
               </div>
             </article>
           </div>
           
           <div className="insight-success">
-            <strong>Validation:</strong> High similarity ({transparencyData.similarity.percentage.toFixed(1)}%) between 
+            <strong>Validation:</strong> High similarity ({similarity.percentage.toFixed(1)}%) between 
             male and female LBM coefficients supports the hypothesis that biological scaling relationships 
             are universal across sexes when properly normalized.
-            <br /><br />
-            <strong>🚀 Factory Validation:</strong> R² = {factoryResult.validationMetrics.allometric_lbm?.rSquared.toFixed(3)}, 
-            Correlation = {factoryResult.validationMetrics.allometric_lbm?.correlation.toFixed(3)}
           </div>
         </section>
       )}
@@ -416,20 +367,20 @@ const RatiometricVsBiological: React.FC = () => {
         <header>
           <h3>{measurement.name} vs Body Surface Area</h3>
           <p>
-            Universal LBM Coefficient: <span className="coefficient-display">{formatCoefficient(transparencyData.universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{transparencyData.expectedExponent}</span>
+            Universal LBM Coefficient: <span className="coefficient-display">{formatCoefficient(universalCoefficient, measurement.type)} {measurement.absoluteUnit}/kg^{expectedExponent}</span>
             <br />
             <small style={{ color: 'var(--pico-muted-color)' }}>
-              Both approaches use 97.5th percentile (ULN) reference points for fair comparison. Biological curves shown for realistic population range (BSA 1.0-3.2 m², heights 120-220cm).
+              Both approaches use 97.5th percentile (ULN) reference points for fair comparison. Allometric curves shown for realistic population range (BSA 1.0-3.2 m², heights 120-220cm).
               Using {formulaSelection.bsaFormula.toUpperCase()} BSA and {formulaSelection.lbmFormula.toUpperCase()} LBM formulas.
             </small>
           </p>
         </header>
         
         <ResponsiveContainer width="100%" height={500}>
-          <LineChart data={chartData}>
+          <LineChart data={factoryResult.chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--pico-border-color)" opacity={0.5} />
             <XAxis 
-              dataKey="bsa"
+              dataKey="scalingValue"
               type="number"
               domain={[0, 3.5]}
               tickFormatter={(value) => value.toFixed(1)}
@@ -448,48 +399,59 @@ const RatiometricVsBiological: React.FC = () => {
               }}
             />
             <Tooltip 
-              formatter={(value, name) => [
-                typeof value === 'number' ? value.toFixed(3) : value, 
-                typeof name === 'string'
-                  ? name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-                  : String(name)
-              ]}
-              labelFormatter={(value) => `BSA: ${value?.toFixed(2)} m² (${formulaSelection.bsaFormula.toUpperCase()})`}
+              formatter={(value, name) => {
+                if (typeof value !== 'number') return [value, name];
+                
+                // Clean up the series names for display
+                let displayName = String(name);
+                if (displayName.includes('allometric_lbm_male')) displayName = 'Allometric LBM Male';
+                else if (displayName.includes('allometric_lbm_female')) displayName = 'Allometric LBM Female';
+                else if (displayName.includes('ratiometric_bsa_male')) displayName = 'Ratiometric BSA Male';
+                else if (displayName.includes('ratiometric_bsa_female')) displayName = 'Ratiometric BSA Female';
+                
+                return [value.toFixed(2), displayName];
+              }}
+              labelFormatter={(value) => `BSA: ${value?.toFixed(2)} m²`}
+              contentStyle={{
+                fontSize: '0.875rem',
+                padding: '0.5rem',
+                maxWidth: '200px'
+              }}
             />
             
             {/* Biological curves (curved) - THICK SOLID LINES */}
             <Line 
-              dataKey="biologicalMale" 
+              dataKey="allometric_lbm_male" 
               stroke="#3b82f6" 
               strokeWidth={4}
               dot={false}
-              name={`Biological Male (${formulaSelection.lbmFormula.toUpperCase()} LBM^${transparencyData.expectedExponent})`}
+              name="Allometric LBM Male"
               connectNulls={false}
             />
             <Line 
-              dataKey="biologicalFemale" 
+              dataKey="allometric_lbm_female" 
               stroke="#dc2626" 
               strokeWidth={4}
               dot={false}
-              name={`Biological Female (${formulaSelection.lbmFormula.toUpperCase()} LBM^${transparencyData.expectedExponent})`}
+              name="Allometric LBM Female"
               connectNulls={false}
             />
             
             {/* Ratiometric lines (straight) - THIN DASHED LINES */}
             <Line 
-              dataKey="ratiometricMale" 
+              dataKey="ratiometric_bsa_male" 
               stroke="#60a5fa" 
               strokeWidth={2}
               dot={false}
-              name={`Ratiometric Male (${formulaSelection.bsaFormula.toUpperCase()} BSA Linear)`}
+              name="Ratiometric BSA Male"
               strokeDasharray="8 4"
             />
             <Line 
-              dataKey="ratiometricFemale" 
+              dataKey="ratiometric_bsa_female" 
               stroke="#f87171" 
               strokeWidth={2}
               dot={false}
-              name={`Ratiometric Female (${formulaSelection.bsaFormula.toUpperCase()} BSA Linear)`}
+              name="Ratiometric BSA Female"
               strokeDasharray="8 4"
             />
             
@@ -499,14 +461,14 @@ const RatiometricVsBiological: React.FC = () => {
             
             {/* Reference population markers */}
             <ReferenceLine 
-              x={transparencyData.referencePopulations.male.bsa} 
+              x={referencePopulation.male.bsa} 
               stroke="#3b82f6" 
               strokeWidth={1} 
               strokeDasharray="2 2"
               label={{ value: "♂ Ref", position: "top", style: { fontSize: '12px' } }}
             />
             <ReferenceLine 
-              x={transparencyData.referencePopulations.female.bsa} 
+              x={referencePopulation.female.bsa} 
               stroke="#dc2626" 
               strokeWidth={1} 
               strokeDasharray="2 2"
@@ -520,7 +482,7 @@ const RatiometricVsBiological: React.FC = () => {
       <section className="metrics-grid">
         <article className="insight-danger">
           <header>
-            <h3>Ratiometric Scaling Issues</h3>
+            <h3>Ratiometric BSA Issues</h3>
           </header>
           <dl>
             <dt>Male slope (97.5th percentile):</dt>
@@ -529,29 +491,25 @@ const RatiometricVsBiological: React.FC = () => {
             <dd className="coefficient-display">{ratiometricSlopeFemale.toFixed(3)}</dd>
             <dt>Sex difference:</dt>
             <dd className="status-error">{ratiometricRelativeDiff.toFixed(1)}%</dd>
-            <dt>Factory R²:</dt>
-            <dd className="coefficient-display">{factoryResult.validationMetrics.ratiometric_bsa?.rSquared.toFixed(3)}</dd>
           </dl>
           <small style={{ color: 'var(--pico-muted-color)' }}>
-            Artificial mathematical artifact (same reference points as biological curves)
+            Mathematical extrapolation (same reference points as allometric curves)
           </small>
         </article>
         
         <article className="insight-success">
           <header>
-            <h3>Biological Scaling Truth</h3>
+            <h3>Allometric LBM Truth</h3>
           </header>
           <dl>
             <dt>Universal coefficient:</dt>
-            <dd className="coefficient-display">{formatCoefficient(transparencyData.universalCoefficient, measurement.type)}</dd>
+            <dd className="coefficient-display">{formatCoefficient(universalCoefficient, measurement.type)}</dd>
             <dt>Male coefficient:</dt>
-            <dd className="coefficient-display">{formatCoefficient(transparencyData.individualCoefficients.male, measurement.type)}</dd>
+            <dd className="coefficient-display">{formatCoefficient(lbmCoefficients.male, measurement.type)}</dd>
             <dt>Female coefficient:</dt>
-            <dd className="coefficient-display">{formatCoefficient(transparencyData.individualCoefficients.female, measurement.type)}</dd>
+            <dd className="coefficient-display">{formatCoefficient(lbmCoefficients.female, measurement.type)}</dd>
             <dt>Sex similarity:</dt>
-            <dd className="status-excellent">{transparencyData.similarity.percentage.toFixed(1)}%</dd>
-            <dt>Factory R²:</dt>
-            <dd className="coefficient-display">{factoryResult.validationMetrics.allometric_lbm?.rSquared.toFixed(3)}</dd>
+            <dd className="status-excellent">{similarity.percentage.toFixed(1)}%</dd>
           </dl>
           <small style={{ color: 'var(--pico-muted-color)' }}>
             Universal biology revealed using {formulaSelection.bsaFormula.toUpperCase()} + {formulaSelection.lbmFormula.toUpperCase()}
@@ -567,18 +525,13 @@ const RatiometricVsBiological: React.FC = () => {
         <div className="metrics-grid">
           <div>
             <p>
-              <strong>Curved biological lines</strong> (thick solid) represent universal scaling relationships 
+              <strong>Allometric LBM curves</strong> (thick solid) represent universal scaling relationships 
               derived from actual population data using {formulaSelection.lbmFormula.toUpperCase()} LBM calculations, 
               showing natural convergence between sexes.
             </p>
             <p>
-              <strong>Straight ratiometric lines</strong> (thin dashed) are mathematical extrapolations 
+              <strong>Ratiometric BSA lines</strong> (thin dashed) are mathematical extrapolations 
               using {formulaSelection.bsaFormula.toUpperCase()} BSA indexing that can extend to any value but create artificial sex differences.
-            </p>
-            {/* 🚀 NEW: Factory Insights */}
-            <p>
-              <strong>🤖 Factory Analysis:</strong> The DeweyMethodFactory recommends <em>{factoryResult.insights.recommendedApproach}</em> 
-              based on measurement type ({measurement.type}) with <em>{factoryResult.insights.clinicalRelevance}</em> clinical relevance.
             </p>
           </div>
           <div style={{ background: 'var(--pico-card-background-color)', padding: '1rem', borderRadius: 'var(--pico-border-radius)', border: '1px solid var(--pico-border-color)' }}>
@@ -586,30 +539,65 @@ const RatiometricVsBiological: React.FC = () => {
             <dl style={{ fontSize: '0.875rem' }}>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#3b82f6', marginRight: '0.5rem' }}></div>
-                Male biological ({formulaSelection.lbmFormula.toUpperCase()} LBM^{transparencyData.expectedExponent})
+                Allometric LBM Male
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '3px', backgroundColor: '#dc2626', marginRight: '0.5rem' }}></div>
-                Female biological ({formulaSelection.lbmFormula.toUpperCase()} LBM^{transparencyData.expectedExponent})
+                Allometric LBM Female
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#60a5fa', marginRight: '0.5rem', borderTop: '2px dashed #60a5fa' }}></div>
-                Male ratiometric ({formulaSelection.bsaFormula.toUpperCase()} BSA 97.5th percentile)
+                Ratiometric BSA Male
               </dt>
               <dt style={{ display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '1.5rem', height: '2px', backgroundColor: '#f87171', marginRight: '0.5rem', borderTop: '2px dashed #f87171' }}></div>
-                Female ratiometric ({formulaSelection.bsaFormula.toUpperCase()} BSA 97.5th percentile)
+                Ratiometric BSA Female
               </dt>
             </dl>
-            
-            {/* 🚀 NEW: Factory Status */}
-            <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>
-              <strong>Engine:</strong> DeweyMethodFactory • 
-              <strong>Configs:</strong> {factoryResult.configurations.length} • 
-              <strong>R² Range:</strong> {Math.min(...Object.values(factoryResult.validationMetrics).map(m => m.rSquared)).toFixed(3)} - {Math.max(...Object.values(factoryResult.validationMetrics).map(m => m.rSquared)).toFixed(3)}
-            </div>
           </div>
         </div>
+        
+        {/* Debug/Advanced Section - Collapsible */}
+        <details style={{ marginTop: '1.5rem' }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--pico-muted-color)' }}>
+            🔧 Advanced Factory Diagnostics
+          </summary>
+          <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--pico-code-background-color)', borderRadius: 'var(--pico-border-radius)' }}>
+            <div className="metrics-grid">
+              <div>
+                <h4>🤖 Factory Insights</h4>
+                <dl style={{ fontSize: '0.875rem' }}>
+                  <dt>Best performing:</dt>
+                  <dd className="coefficient-display">{factoryResult.insights.bestConfiguration}</dd>
+                  <dt>Recommended:</dt>
+                  <dd className="coefficient-display">{factoryResult.insights.recommendedApproach}</dd>
+                  <dt>Clinical relevance:</dt>
+                  <dd className="coefficient-display">{factoryResult.insights.clinicalRelevance}</dd>
+                </dl>
+              </div>
+              <div>
+                <h4>🧮 Validation Metrics</h4>
+                <dl style={{ fontSize: '0.875rem' }}>
+                  <dt>LBM R²:</dt>
+                  <dd className="status-excellent">{factoryResult.validationMetrics.allometric_lbm?.rSquared.toFixed(3)}</dd>
+                  <dt>BSA R²:</dt>
+                  <dd className="status-good">{factoryResult.validationMetrics.ratiometric_bsa?.rSquared.toFixed(3)}</dd>
+                  <dt>Correlations:</dt>
+                  <dd className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</dd>
+                </dl>
+              </div>
+            </div>
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <button
+                onClick={() => console.log('🔍 Full Factory Result:', factoryResult)}
+                className="secondary"
+                style={{ fontSize: '0.8rem' }}
+              >
+                🔍 Console Log Full Result
+              </button>
+            </div>
+          </div>
+        </details>
       </section>
     </div>
   );

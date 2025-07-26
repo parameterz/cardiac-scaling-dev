@@ -920,50 +920,8 @@ export const generateQuickComparison = (
   return generateScalingAnalysis(measurement, formulaSelection, configurations, options);
 };
 
-/**
- * Extract legacy data for backwards compatibility with existing components
- */
-export const extractLegacyData = (result: DeweyMethodResult) => {
-  const lbmConfig = result.configurations.find(c => c.id === 'allometric_lbm');
-  const ratiometricConfig = result.configurations.find(c => c.id === 'ratiometric_bsa');
-  
-  if (!lbmConfig || !ratiometricConfig) {
-    throw new Error('Legacy extraction requires LBM and ratiometric configurations');
-  }
-
-  const lbmCoeff = result.coefficients[lbmConfig.id];
-  const ratiometricCoeff = result.coefficients[ratiometricConfig.id];
-
-  // Transform to legacy format - FIXED: scalingValue is now BSA for chart
-  return {
-    transparencyData: {
-      measurement: result.measurement,
-      referencePopulations: result.referencePopulations,
-      backCalculatedAbsolutes: {
-        male: lbmCoeff.male * Math.pow(result.referencePopulations.male.lbm, lbmConfig.exponent),
-        female: lbmCoeff.female * Math.pow(result.referencePopulations.female.lbm, lbmConfig.exponent)
-      },
-      individualCoefficients: {
-        male: lbmCoeff.male,
-        female: lbmCoeff.female
-      },
-      universalCoefficient: lbmCoeff.universal || (lbmCoeff.male + lbmCoeff.female) / 2,
-      similarity: lbmCoeff.similarity,
-      expectedExponent: lbmConfig.exponent
-    },
-    chartData: result.chartData.map(point => ({
-      bsa: point.scalingValue, // FIXED: scalingValue is now BSA in chart data
-      biologicalMale: point[`${lbmConfig.id}_male`],
-      biologicalFemale: point[`${lbmConfig.id}_female`],
-      ratiometricMale: point[`${ratiometricConfig.id}_male`],
-      ratiometricFemale: point[`${ratiometricConfig.id}_female`]
-    }))
-  };
-};
-
 export default {
   generateScalingAnalysis,
   generateQuickComparison,
-  getStandardConfigurations,
-  extractLegacyData
+  getStandardConfigurations
 };
