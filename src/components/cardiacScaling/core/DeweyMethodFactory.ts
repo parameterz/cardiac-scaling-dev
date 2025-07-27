@@ -3,11 +3,7 @@
 /**
  * FIXED VERSION: Dewey Method Factory - Universal Cardiac Scaling Analysis Engine
  * 
- * Key Fixes:
- * 1. Fix BSA allometric calculation (use proper geometric exponents)
- * 2. Add Height^1.6 and Height^2.7 scaling options 
- * 3. Use correct source data (height-indexed when available)
- * 4. Sex-specific coefficients for BSA/Height, Universal for LBM
+ * KEY BUG FIX: Height^1.6 and Height^2.7 back-calculation now uses correct exponents
  */
 
 import { 
@@ -30,7 +26,7 @@ import {
 } from '@/data/scalingLaws';
 
 // =============================================================================
-// TYPE DEFINITIONS
+// TYPE DEFINITIONS (unchanged)
 // =============================================================================
 
 export type ScalingVariable = 'bsa' | 'lbm' | 'height';
@@ -43,7 +39,7 @@ export interface ScalingConfiguration {
   variable: ScalingVariable;
   exponent: number;
   description: string;
-  sourceData?: 'bsa' | 'height' | 'height16' | 'height27';  // NEW: Which Strom data to use
+  sourceData?: 'bsa' | 'height' | 'height16' | 'height27';
 }
 
 export interface PopulationPoint {
@@ -126,7 +122,7 @@ export interface AnalysisOptions {
 }
 
 // =============================================================================
-// CANONICAL REFERENCE POPULATIONS (BMI 24 STANDARD)
+// CANONICAL REFERENCE POPULATIONS (unchanged)
 // =============================================================================
 
 const CANONICAL_REFERENCE_BASE = {
@@ -186,17 +182,13 @@ const generateCanonicalReferences = (
 };
 
 // =============================================================================
-// FIXED: PREDEFINED SCALING CONFIGURATIONS
+// PREDEFINED SCALING CONFIGURATIONS (unchanged)
 // =============================================================================
 
-/**
- * FIXED: Generate standard scaling configurations with proper source data
- */
 export const getStandardConfigurations = (measurementType: MeasurementType): ScalingConfiguration[] => {
   const expectedExponents = getScalingExponents(measurementType);
 
   const configs: ScalingConfiguration[] = [
-    // Ratiometric BSA (always uses BSA-indexed data)
     {
       id: 'ratiometric_bsa',
       name: 'Ratiometric BSA',
@@ -206,8 +198,6 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       description: 'Current clinical standard - linear BSA indexing',
       sourceData: 'bsa'
     },
-
-    // Allometric LBM (universal biological - uses BSA-indexed data)
     {
       id: 'allometric_lbm',
       name: `Allometric LBM^${expectedExponents.lbm}`,
@@ -219,7 +209,6 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     }
   ];
 
-  // Add BSA allometric ONLY if it's different from ratiometric
   if (measurementType !== 'area') {
     configs.push({
       id: 'allometric_bsa',
@@ -232,7 +221,6 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     });
   }
 
-  // Height^1.0 (use height-indexed data when available)
   configs.push({
     id: 'allometric_height',
     name: `Allometric Height^${expectedExponents.height}`,
@@ -240,10 +228,9 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     variable: 'height',
     exponent: expectedExponents.height,
     description: 'Geometric height scaling',
-    sourceData: 'height'  // Use height-indexed data
+    sourceData: 'height'
   });
 
-  // NEW: Add Height^1.6 and Height^2.7 for area/volume measurements
   if (measurementType === 'area' || measurementType === 'mass' || measurementType === 'volume') {
     configs.push(
       {
@@ -253,7 +240,7 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
         variable: 'height',
         exponent: 1.6,
         description: 'Empirical height scaling from literature',
-        sourceData: 'height16'  // Use height16-indexed data from Strom
+        sourceData: 'height16'
       },
       {
         id: 'height_27',
@@ -262,12 +249,11 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
         variable: 'height',
         exponent: 2.7,
         description: 'Empirical height scaling from literature',
-        sourceData: 'height27'  // Use height27-indexed data from Strom
+        sourceData: 'height27'
       }
     );
   }
 
-  // Add theoretical Height^3.0 for mass/volume only
   if (measurementType === 'mass' || measurementType === 'volume') {
     configs.push({
       id: 'height_geometric',
@@ -276,11 +262,10 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       variable: 'height',
       exponent: 3.0,
       description: 'Theoretical geometric scaling for 3D measurements',
-      sourceData: 'height'  // Use regular height data, derive coefficient
+      sourceData: 'height'
     });
   }
 
-  // Add theoretical Height^2.0 for areas only  
   if (measurementType === 'area') {
     configs.push({
       id: 'height_geometric',
@@ -289,7 +274,7 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       variable: 'height',
       exponent: 2.0,
       description: 'Theoretical geometric scaling for 2D measurements',
-      sourceData: 'height'  // Use regular height data, derive coefficient
+      sourceData: 'height'
     });
   }
 
@@ -297,11 +282,12 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
 };
 
 // =============================================================================
-// FIXED: COEFFICIENT CALCULATION (DEWEY METHODOLOGY)
+// FIXED: COEFFICIENT CALCULATION - HEIGHT EXPONENT BUG FIX
 // =============================================================================
 
 /**
  * FIXED: Calculate scaling coefficients using proper source data and exponents
+ * 🐛 BUG FIX: Height^1.6 and Height^2.7 now use correct powered heights for back-calculation
  */
 const calculateCoefficients = (
   measurement: EnhancedMeasurementData,
@@ -309,7 +295,7 @@ const calculateCoefficients = (
   referencePopulations: DeweyMethodResult['referencePopulations']
 ): ScalingCoefficients => {
   
-  // FIXED: Step 1 - Get indexed reference values from CORRECT source
+  // Step 1 - Get indexed reference values from CORRECT source (unchanged)
   const getIndexedValues = (sex: Sex) => {
     const data = measurement[sex];
     
@@ -332,15 +318,18 @@ const calculateCoefficients = (
   const maleIndexed = getIndexedValues('male');
   const femaleIndexed = getIndexedValues('female');
 
-  // Step 2: Back-calculate absolute values using CORRECT scaling variable
+  // 🐛 FIXED: Step 2 - Back-calculate absolute values using CORRECT scaling variable
   const getBackCalculationVariable = (sex: Sex) => {
     const pop = referencePopulations[sex];
+    const heightInMeters = pop.height / 100;
     
     switch (configuration.sourceData) {
       case 'height':
-      case 'height16': 
+        return heightInMeters; // height^1.0
+      case 'height16':
+        return Math.pow(heightInMeters, 1.6); // 🔧 FIX: height^1.6
       case 'height27':
-        return pop.height / 100; // Convert to meters
+        return Math.pow(heightInMeters, 2.7); // 🔧 FIX: height^2.7
       case 'bsa':
       default:
         return pop.bsa;
@@ -353,6 +342,11 @@ const calculateCoefficients = (
   const maleAbsolute = maleIndexed * maleBackCalcVar;
   const femaleAbsolute = femaleIndexed * femaleBackCalcVar;
 
+  console.log(`🔧 Coefficient calculation for ${configuration.id}:`);
+  console.log(`   Male indexed: ${maleIndexed.toFixed(3)} -> absolute: ${maleAbsolute.toFixed(2)}`);
+  console.log(`   Female indexed: ${femaleIndexed.toFixed(3)} -> absolute: ${femaleAbsolute.toFixed(2)}`);
+  console.log(`   Back-calc variables: M=${maleBackCalcVar.toFixed(3)}, F=${femaleBackCalcVar.toFixed(3)}`);
+
   if (configuration.approach === 'ratiometric') {
     // Ratiometric: coefficients are the indexed values themselves
     return {
@@ -364,7 +358,7 @@ const calculateCoefficients = (
       }
     };
   } else {
-    // FIXED: Allometric calculation with proper scaling values
+    // Allometric calculation with proper scaling values
     const getScalingValue = (sex: Sex) => {
       const pop = referencePopulations[sex];
       switch (configuration.variable) {
@@ -380,6 +374,9 @@ const calculateCoefficients = (
 
     const maleCoefficient = maleAbsolute / Math.pow(maleScalingValue, configuration.exponent);
     const femaleCoefficient = femaleAbsolute / Math.pow(femaleScalingValue, configuration.exponent);
+
+    console.log(`   Scaling values: M=${maleScalingValue.toFixed(3)}^${configuration.exponent}, F=${femaleScalingValue.toFixed(3)}^${configuration.exponent}`);
+    console.log(`   Coefficients: M=${maleCoefficient.toFixed(3)}, F=${femaleCoefficient.toFixed(3)}`);
 
     // Universal coefficient ONLY for LBM (biological scaling)
     const shouldUseUniversal = configuration.variable === 'lbm';
@@ -401,7 +398,7 @@ const calculateCoefficients = (
 };
 
 // =============================================================================
-// POPULATION GENERATION & CHART DATA (Keep existing logic)
+// REST OF THE CODE (unchanged - population generation, validation, etc.)
 // =============================================================================
 
 const generatePopulationData = (
@@ -556,7 +553,7 @@ const generateChartData = (
 };
 
 // =============================================================================
-// VALIDATION & CORRELATION (Keep existing)
+// VALIDATION & CORRELATION (unchanged)
 // =============================================================================
 
 const calculateValidationMetrics = (
@@ -708,7 +705,7 @@ const generateInsights = (
 
   let recommendedApproach = 'allometric_lbm';
   if (measurement.type === 'area') {
-    recommendedApproach = 'ratiometric_bsa'; // Same as allometric BSA^1.0
+    recommendedApproach = 'ratiometric_bsa';
   } else if (measurement.type === 'linear') {
     recommendedApproach = 'allometric_lbm';
   }
@@ -727,7 +724,7 @@ const generateInsights = (
 };
 
 // =============================================================================
-// MAIN FACTORY FUNCTIONS
+// MAIN FACTORY FUNCTIONS (unchanged)
 // =============================================================================
 
 export const generateScalingAnalysis = (
@@ -738,6 +735,8 @@ export const generateScalingAnalysis = (
 ): DeweyMethodResult => {
   const scalingConfigurations = configurations || getStandardConfigurations(measurement.type);
   const referencePopulations = generateCanonicalReferences(formulaSelection);
+  
+  console.log(`🔧 Starting scaling analysis for ${measurement.name} (${measurement.type})`);
   
   const coefficients: Record<string, ScalingCoefficients> = {};
   scalingConfigurations.forEach(config => {
