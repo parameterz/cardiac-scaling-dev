@@ -2,12 +2,13 @@
 import React, { useState } from "react";
 
 // Import components
-import Introduction from "./components/Introduction";
+import Welcome from "./components/Welcome";
+import Introduction from "./components/Introduction"; // Now becomes "Methodology"
 import FourWayScalingComparison from "./components/cardiacScaling/FourWayScalingComparison";
 import { getMeasurementsByType } from "./data/stromData";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"intro" | "linear" | "area" | "mass_volume">("intro");
+  const [activeTab, setActiveTab] = useState<"welcome" | "linear" | "area" | "mass_volume" | "methodology">("welcome");
 
   // Get measurements for each category
   const linearMeasurements = getMeasurementsByType('linear');
@@ -16,6 +17,11 @@ function App() {
   const volumeMeasurements = getMeasurementsByType('volume');
   const massVolumeMeasurements = [...massMeasurements, ...volumeMeasurements];
 
+  // Handle navigation from Welcome buttons
+  const navigateToTab = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div>
       {/* Header with navigation */}
@@ -23,43 +29,50 @@ function App() {
         <hgroup>
           <h1>🫀 Cardiac Scaling Analysis Laboratory</h1>
           <p>
-            Interactive exploration of geometric scaling principles: when ratiometric scaling is appropriate 
-            and when allometric transformation is needed
+            Interactive exploration of geometric scaling principles in cardiac measurements
           </p>
         </hgroup>
 
         {/* Tab Navigation using Pico CSS */}
         <nav className="tab-navigation">
           <button
-            className={`tab-button ${activeTab === "intro" ? "active" : ""}`}
-            onClick={() => setActiveTab("intro")}
+            className={`tab-button ${activeTab === "welcome" ? "active" : ""}`}
+            onClick={() => setActiveTab("welcome")}
           >
-            📚 Theory & Methodology
+            🚀 Getting Started
           </button>
           <button
             className={`tab-button ${activeTab === "linear" ? "active" : ""}`}
             onClick={() => setActiveTab("linear")}
           >
-            📐 Linear (1D) ({linearMeasurements.length})
+            📐 Linear ({linearMeasurements.length})
           </button>
           <button
             className={`tab-button ${activeTab === "area" ? "active" : ""}`}
             onClick={() => setActiveTab("area")}
           >
-            📊 Area (2D) ({areaMeasurements.length})
+            📊 Area ({areaMeasurements.length})
           </button>
           <button
             className={`tab-button ${activeTab === "mass_volume" ? "active" : ""}`}
             onClick={() => setActiveTab("mass_volume")}
           >
-            📦 Mass & Volume (3D) ({massVolumeMeasurements.length})
+            📦 Mass & Volume ({massVolumeMeasurements.length})
+          </button>
+          <button
+            className={`tab-button ${activeTab === "methodology" ? "active" : ""}`}
+            onClick={() => setActiveTab("methodology")}
+          >
+            🔬 Methodology
           </button>
         </nav>
       </header>
 
       {/* Main Content */}
       <main className="container">
-        {activeTab === "intro" && <Introduction />}
+        {activeTab === "welcome" && (
+          <Welcome onNavigate={setActiveTab} />
+        )}
         
         {activeTab === "linear" && (
           <section>
@@ -67,35 +80,43 @@ function App() {
               <hgroup>
                 <h2>📐 Linear Measurements (1D)</h2>
                 <p>
-                  Dimensions, diameters, and thicknesses. <strong>Height ratiometric scaling</strong> is 
-                  geometrically appropriate (both 1D). Allometric alternatives: LBM^0.33, BSA^0.5
+                  Dimensions, diameters, and thicknesses that scale with body size^(1/3). 
+                  Expected relationships: LBM^0.33, BSA^0.5, Height^1.0
                 </p>
               </hgroup>
             </header>
             
-            <div className="insight-warning">
-              <h3>The Linear Measurement Problem</h3>
+            <div className="insight-danger">
+              <h3>🚨 The Ratiometric Problem is Most Visible Here</h3>
               <p>
-                Current clinical practice uses <strong>BSA ratiometric scaling</strong> (BSA^1.0) for linear 
-                measurements, but this mixes dimensional spaces: 1D measurement ÷ 2D variable. 
-                Geometrically appropriate options include:
+                Traditional BSA indexing (BSA^1.0) dramatically overcorrects linear measurements. 
+                A 2-meter tall athlete appears to have thinner walls than a petite person, 
+                even when their absolute measurements are larger!
               </p>
-              <ul>
-                <li><strong>Height ratiometric</strong> (Height^1.0) - matches 1D dimensionality</li>
-                <li><strong>BSA allometric</strong> (BSA^0.5 = √BSA) - transforms 2D → 1D</li>
-                <li><strong>LBM allometric</strong> (LBM^0.33 = ∛LBM) - transforms 3D → 1D</li>
-              </ul>
+              <p>
+                <strong>Geometric theory predicts BSA^0.5 = √BSA for proper linear scaling.</strong>
+              </p>
             </div>
 
             <FourWayScalingComparison 
               availableMeasurements={linearMeasurements}
               initialMeasurement="lvdd"
               categoryContext={{
-                categoryName: "Linear Measurements (1D)",
+                categoryName: "Linear Measurements",
                 expectedApproaches: 4,
-                scalingInfo: "Geometrically appropriate: Height^1.0 (ratiometric). Allometric alternatives: LBM^0.33, BSA^0.5"
+                scalingInfo: "Expected: LBM^0.33, BSA^0.5, Height^1.0"
               }}
             />
+            
+            <div className="transparency-panel">
+              <h3>💡 Key Insights for Linear Measurements</h3>
+              <ul>
+                <li><strong>Biggest scaling differences:</strong> Linear measurements show the most dramatic differences between approaches</li>
+                <li><strong>Clinical impact:</strong> Ratiometric BSA indexing can misclassify wall thickness in large vs small patients</li>
+                <li><strong>LBM advantage:</strong> Universal biological scaling (LBM^0.33) works regardless of body composition</li>
+                <li><strong>Height scaling:</strong> Direct Height^1.0 relationship makes intuitive sense for dimensions</li>
+              </ul>
+            </div>
           </section>
         )}
         
@@ -105,27 +126,20 @@ function App() {
               <hgroup>
                 <h2>📊 Area Measurements (2D)</h2>
                 <p>
-                  Chamber areas and valve areas. <strong>BSA ratiometric scaling</strong> is geometrically 
-                  correct (both 2D)! Allometric alternatives: LBM^0.67, Height^2.0
+                  Chamber areas and valve areas that scale with body size^(2/3). 
+                  Expected relationships: LBM^0.67, BSA^1.0, Height^2.0
                 </p>
               </hgroup>
             </header>
             
             <div className="insight-success">
-              <h3>🎯 Current Clinical Practice Gets This Right!</h3>
+              <h3>🎯 Traditional Indexing Gets This One Right!</h3>
               <p>
-                Area measurements are the only cardiac parameters where traditional <strong>BSA ratiometric 
-                indexing</strong> (BSA^1.0) aligns perfectly with geometric theory. BSA is literally surface 
-                area, so dividing area measurements by BSA makes geometric sense.
+                Area measurements are the <strong>only</strong> cardiac parameters where ratiometric BSA indexing 
+                aligns perfectly with geometric theory. BSA^1.0 = BSA^1.0 - they're identical!
               </p>
-              <ul>
-                <li><strong>BSA ratiometric</strong> (BSA^1.0) - both measurement and scaling variable are 2D ✓</li>
-                <li><strong>Height allometric</strong> (Height^2.0) - transforms 1D → 2D geometric scaling</li>
-                <li><strong>LBM allometric</strong> (LBM^0.67) - transforms 3D → 2D biological scaling</li>
-              </ul>
               <p>
-                <strong>Prediction:</strong> You should see less dramatic differences between scaling approaches 
-                for area measurements because current practice is already geometrically appropriate.
+                <strong>This is why area measurements show the smallest differences between scaling approaches.</strong>
               </p>
             </div>
 
@@ -133,11 +147,21 @@ function App() {
               availableMeasurements={areaMeasurements}
               initialMeasurement="raesa"
               categoryContext={{
-                categoryName: "Area Measurements (2D)",
+                categoryName: "Area Measurements",
                 expectedApproaches: 5,
-                scalingInfo: "Geometrically correct: BSA^1.0 (ratiometric = current practice). Alternatives: LBM^0.67, Height^2.0"
+                scalingInfo: "Expected: LBM^0.67, BSA^1.0 (=Ratiometric), Height^2.0"
               }}
             />
+            
+            <div className="transparency-panel">
+              <h3>💡 Key Insights for Area Measurements</h3>
+              <ul>
+                <li><strong>Geometric validation:</strong> Ratiometric BSA = Allometric BSA^1.0 for areas</li>
+                <li><strong>Smallest differences:</strong> Less dramatic scaling differences since traditional method is correct</li>
+                <li><strong>Height^2.0:</strong> Theoretical geometric scaling for 2D measurements</li>
+                <li><strong>Clinical confidence:</strong> Current BSA indexing practice is geometrically sound for areas</li>
+              </ul>
+            </div>
           </section>
         )}
         
@@ -147,45 +171,21 @@ function App() {
               <hgroup>
                 <h2>📦 Mass & Volume Measurements (3D)</h2>
                 <p>
-                  Tissue masses and chamber volumes. <strong>LBM ratiometric scaling</strong> is geometrically 
-                  appropriate (both 3D). Allometric alternatives: BSA^1.5, Height^3.0 (theoretical geometric), plus empirical Height^1.6, Height^2.7
+                  Tissue masses and chamber volumes that scale with body size^1.0. 
+                  Expected relationships: LBM^1.0, BSA^1.5, Height^1.6-3.0
                 </p>
               </hgroup>
             </header>
             
-            <div className="insight-info">
-              <h3>The Mass/Volume Scaling Challenge</h3>
-              <p>
-                Current clinical practice uses <strong>BSA ratiometric scaling</strong> for mass/volume measurements, 
-                mixing 3D measurements with 2D scaling variables. Geometrically appropriate alternatives:
-              </p>
-              <ul>
-                <li><strong>LBM ratiometric</strong> (LBM^1.0) - both are 3D/mass-based ✓</li>
-                <li><strong>BSA allometric</strong> (BSA^1.5) - transforms 2D → 3D geometric scaling</li>
-                <li><strong>Height allometric</strong> (Height^1.6-2.7) - empirical scaling (deviates from Height^3.0 geometric prediction)</li>
-              </ul>
-            </div>
-            
             <div className="insight-warning">
-              <h3>🔬 The Height Exponent Mystery</h3>
+              <h3>🤔 The Height Exponent Mystery</h3>
               <p>
-                Pure geometric theory predicts <strong>Height^3.0</strong> for 3D measurements, but empirical 
-                studies consistently find exponents between <strong>1.6-2.7</strong>. This suggests cardiac 
-                scaling doesn't follow perfect geometric similarity.
+                Pure geometric theory predicts <strong>Height^3.0</strong> for 3D measurements, 
+                but real cardiac data consistently shows exponents between <strong>1.6-2.7</strong>.
               </p>
-              <div className="metrics-grid">
-                <div>
-                  <h4>Theoretical Prediction</h4>
-                  <p>Height^3.0 (perfect geometric scaling)</p>
-                </div>
-                <div>
-                  <h4>Empirical Reality</h4>
-                  <p>Height^1.6-2.7 (biological scaling deviates from pure geometry)</p>
-                </div>
-              </div>
               <p>
-                <strong>Insight:</strong> Biology is more complex than pure physics! Cardiac adaptation, 
-                fitness, body composition, and other factors create deviations from perfect geometric similarity.
+                <strong>Question:</strong> Do hearts scale with perfect geometric similarity, 
+                or does biology break the rules of physics?
               </p>
             </div>
 
@@ -193,11 +193,38 @@ function App() {
               availableMeasurements={massVolumeMeasurements}
               initialMeasurement="lvm"
               categoryContext={{
-                categoryName: "Mass & Volume Measurements (3D)",
+                categoryName: "Mass & Volume Measurements",
                 expectedApproaches: 6,
-                scalingInfo: "Geometrically appropriate: LBM^1.0 (ratiometric). Alternatives: BSA^1.5, Height^3.0 (theoretical geometric), empirical Height^1.6, Height^2.7"
+                scalingInfo: "Expected: LBM^1.0, BSA^1.5, Height^1.6-3.0"
               }}
             />
+            
+            <div className="transparency-panel">
+              <h3>💡 Key Insights for Mass & Volume</h3>
+              <ul>
+                <li><strong>Height mystery:</strong> Empirical Height^1.6-2.7 vs theoretical Height^3.0</li>
+                <li><strong>LBM scaling:</strong> Direct LBM^1.0 relationship for tissue masses makes biological sense</li>
+                <li><strong>BSA^1.5 theory:</strong> Geometric prediction for 3D from 2D scaling</li>
+                <li><strong>Clinical significance:</strong> Height exponent choice dramatically affects body size corrections</li>
+                <li><strong>Sex differences:</strong> Most pronounced with traditional ratiometric scaling</li>
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {activeTab === "methodology" && (
+          <section>
+            <header>
+              <hgroup>
+                <h2>🔬 Methodology & Theory</h2>
+                <p>
+                  Deep dive into the mathematical foundations, Dewey methodology, 
+                  and geometric scaling principles underlying this analysis.
+                </p>
+              </hgroup>
+            </header>
+            
+            <Introduction />
           </section>
         )}
       </main>
@@ -207,12 +234,21 @@ function App() {
         <hr />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <small>
-            Cardiac Scaling Analysis Laboratory • Educational exploration of when ratiometric scaling 
-            is appropriate vs. when allometric transformation is needed
+            Cardiac Scaling Analysis Laboratory • Educational exploration of geometric scaling principles
           </small>
           <small style={{ color: 'var(--pico-muted-color)' }}>
             Data: <a href="https://doi.org/10.1161/JAHA.123.034029" target="_blank" rel="noopener noreferrer">
               Strom et al. (2024) MESA Study
+            </a>
+          </small>
+        </div>
+        
+        {/* Version info */}
+        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <small style={{ color: 'var(--pico-muted-color)' }}>
+            Educational Tool v0.1.2 • Not for clinical use • 
+            <a href="https://doi.org/10.1161/circulationaha.107.736785" target="_blank" rel="noopener noreferrer">
+              Dewey et al. methodology
             </a>
           </small>
         </div>
