@@ -12,7 +12,7 @@
 import { getReferencePopulation, type PopulationCharacteristics } from './populationDefinitions';
 
 export type Sex = 'male' | 'female';
-export type IndexationType = 'bsa' | 'bmi' | 'height' | 'height2';
+export type IndexationType = 'bsa' | 'bmi' | 'height' | 'height16' | 'height27';
 export type MeasurementType = 'linear' | 'area' | 'mass' | 'volume';
 
 export interface IndexedValue {
@@ -32,13 +32,15 @@ export interface MeasurementData {
     bsa: IndexedValue;
     bmi?: IndexedValue;
     height?: IndexedValue;
-    height2?: IndexedValue;
+    height16?: IndexedValue;
+    height27?: IndexedValue;
   };
   female: {
     bsa: IndexedValue;
     bmi?: IndexedValue;
     height?: IndexedValue;
-    height2?: IndexedValue;
+    height16?: IndexedValue;
+    height27?: IndexedValue;
   };
 }
 
@@ -61,6 +63,7 @@ const UNIT_TYPE_MAP: Record<string, MeasurementType> = {
   // Linear measurements (1D)
   'cm': 'linear',
   'mm': 'linear',
+  'm': 'linear', //meters can also be used for linear measurements
   
   // Area measurements (2D)
   'cm²': 'area',
@@ -86,7 +89,8 @@ const generateIndexedUnit = (absoluteUnit: string, indexType: IndexationType): s
     bsa: 'm²',
     height: 'm',
     bmi: 'kg/m²',
-    height2: 'm²'
+    height16: 'm^1.6',
+    height27: 'm^2.7'
   };
   
   return `${absoluteUnit}/${indexUnitMap[indexType]}`;
@@ -242,11 +246,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'cm²',
     male: {
       bsa: { mean: 9.43, sd: 1.89 },
-      height: { mean: 10.50, sd: 2.10 }
+      height: { mean: 10.50, sd: 2.10 },
+      height16: { mean: 7.59, sd: 1.54 },
+      height27: { mean: 4.20, sd: 0.95 }
     },
     female: {
       bsa: { mean: 8.55, sd: 1.50 },
-      height: { mean: 9.09, sd: 1.67 }
+      height: { mean: 9.09, sd: 1.67 },
+      height16: { mean: 6.85, sd: 1.28 },
+      height27: { mean: 4.09, sd: 0.84 }
     }
   },
   {
@@ -255,11 +263,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'cm²',
     male: {
       bsa: { mean: 10.65, sd: 1.61 },
-      height: { mean: 11.89, sd: 1.98 }
+      height: { mean: 11.89, sd: 1.98 },
+      height16: { mean: 8.59, sd: 1.44 },
+      height27: { mean: 4.75, sd: 0.92 }
     },
     female: {
       bsa: { mean: 9.52, sd: 1.35 },
-      height: { mean: 10.12, sd: 1.58 }
+      height: { mean: 10.12, sd: 1.58 },
+      height16: { mean: 7.63, sd: 1.20 },
+      height27: { mean: 4.55, sd: 0.80 }
     }
   },
   {
@@ -268,11 +280,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'cm²',
     male: {
       bsa: { mean: 6.47, sd: 1.05 },
-      height: { mean: 7.23, sd: 1.28 }
+      height: { mean: 7.23, sd: 1.28 },
+      height16: { mean: 5.22, sd: 0.94 },
+      height27: { mean: 2.89, sd: 0.60 }
     },
     female: {
       bsa: { mean: 5.58, sd: 0.81 },
-      height: { mean: 5.94, sd: 0.98 }
+      height: { mean: 5.94, sd: 0.98 },
+      height16: { mean: 4.48, sd: 0.74 },
+      height27: { mean: 2.67, sd: 0.49 }
     }
   },
 
@@ -285,11 +301,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'g',
     male: {
       bsa: { mean: 84.8, sd: 17.7 },
-      height: { mean: 95.12, sd: 22.92 }
+      height: { mean: 95.12, sd: 22.92 },
+      height16: { mean: 68.75, sd: 17.0 },
+      height27: { mean: 38.03, sd: 10.95 }
     },
     female: {
       bsa: { mean: 72.20, sd: 15.3 },
-      height: { mean: 77.26, sd: 19.28 }
+      height: { mean: 77.26, sd: 19.28 },
+      height16: { mean: 58.20, sd: 14.54 },
+      height27: { mean: 34.71, sd: 9.04 }
     }
   },
 
@@ -302,11 +322,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'mL',
     male: {
       bsa: { mean: 45.0, sd: 7.9 },
-      height: { mean: 50.33, sd: 9.83 }
+      height: { mean: 50.33, sd: 9.83 },
+      height16: { mean: 36.34, sd: 7.07 },
+      height27: { mean: 20.06, sd: 4.39 }
     },
     female: {
       bsa: { mean: 38.9, sd: 6.3 },
-      height: { mean: 41.38, sd: 7.58 }
+      height: { mean: 41.38, sd: 7.58 },
+      height16: { mean: 31.15, sd: 5.58 },
+      height27: { mean: 18.55, sd: 3.50 }
     }
   },
   {
@@ -315,11 +339,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'mL',
     male: {
       bsa: { mean: 17.0, sd: 3.8 },
-      height: { mean: 19.27, sd: 4.62 }
+      height: { mean: 19.27, sd: 4.62 },
+      height16: { mean: 13.91, sd: 3.30 },
+      height27: { mean: 7.67, sd: 1.95 }
     },
     female: {
       bsa: { mean: 14.0, sd: 2.9 },
-      height: { mean: 15.16, sd: 3.53 }
+      height: { mean: 15.16, sd: 3.53 },
+      height16: { mean: 11.40, sd: 2.60 },
+      height27: { mean: 6.79, sd: 1.58 }
     }
   },
   {
@@ -328,11 +356,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'mL',
     male: {
       bsa: { mean: 26.5, sd: 6.5 },
-      height: { mean: 29.57, sd: 7.62 }
+      height: { mean: 29.57, sd: 7.62 }, 
+      height16: { mean: 21.36, sd: 5.48 },
+      height27: { mean: 11.79, sd: 3.18 }
     },
     female: {
       bsa: { mean: 25.6, sd: 5.7 },
-      height: { mean: 27.37, sd: 6.77 }
+      height: { mean: 27.37, sd: 6.77 },
+      height16: { mean: 21.61, sd: 5.07 },
+      height27: { mean: 12.29, sd: 3.12 }
     }
   },
   {
@@ -341,11 +373,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'mL',
     male: {
       bsa: { mean: 44.16, sd: 9.08 },
-      height: { mean: 49.31, sd: 10.63 }
+      height: { mean: 49.31, sd: 10.63 },
+      height16: { mean: 35.65, sd: 7.82 },
+      height27: { mean: 19.71, sd: 4.89 }
     },
     female: {
       bsa: { mean: 41.44, sd: 8.42 },
-      height: { mean: 44.12, sd: 9.61 }
+      height: { mean: 44.12, sd: 9.61 },
+      height16: { mean: 33.25, sd: 7.29 },
+      height27: { mean: 19.84, sd: 4.62 }
     }
   },
   {
@@ -354,11 +390,15 @@ export const STROM_MEASUREMENTS_RAW: MeasurementData[] = [
     absoluteUnit: 'L/min',
     male: {
       bsa: { mean: 2.72, sd: 0.64 },
-      height: { mean: 3.04, sd: 0.75 }
+      height: { mean: 3.04, sd: 0.75 },
+      height16: { mean: 2.20, sd: 0.55 },
+      height27: { mean: 1.22, sd: 0.34 }
     },
     female: {
       bsa: { mean: 2.63, sd: 0.63 },
-      height: { mean: 2.80, sd: 0.70 }
+      height: { mean: 2.80, sd: 0.70 },
+      height16: { mean: 2.11, sd: 0.53 },
+      height27: { mean: 1.26, sd: 0.34 }
     }
   }
 ];
@@ -427,7 +467,9 @@ export const getDatasetSummary = () => {
       bsa: getMeasurementsWithIndex('bsa').length,
       height: getMeasurementsWithIndex('height').length,
       bmi: getMeasurementsWithIndex('bmi').length,
-      height2: getMeasurementsWithIndex('height2').length
+      height16: getMeasurementsWithIndex('height16').length,
+      height27: getMeasurementsWithIndex('height27').length
+    
     },
     source: 'Strom JB, et al. MESA Study (J Am Heart Assoc. 2024)'
   };
