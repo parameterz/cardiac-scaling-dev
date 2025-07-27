@@ -276,15 +276,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
   return (
     <div>
-      {/* Header with category context */}
-      <header>
-        <hgroup>
-          <h3>{categoryContext ? `${categoryContext.categoryName} Analysis` : '4-Way Scaling Comparison'}</h3>
-          <p>
-            {categoryContext ? categoryContext.scalingInfo : 'Comprehensive analysis of all scaling approaches'} for {measurement.name}
-          </p>
-        </hgroup>
-      </header>
 
       {/* Controls */}
       <section>
@@ -406,32 +397,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </div>
       </section>
 
-      {/* Summary Statistics */}
-      <section className="insight-info">
-        <h4>Analysis Summary</h4>
-        <div className="metrics-grid">
-          <div>
-            <h5>Best Performing</h5>
-            <div className="coefficient-display">{factoryResult.insights.bestConfiguration}</div>
-            <small>Highest R² × Sex Similarity score</small>
-          </div>
-          <div>
-            <h5>Recommended</h5>
-            <div className="coefficient-display">{factoryResult.insights.recommendedApproach}</div>
-            <small>Based on measurement type ({measurement.type})</small>
-          </div>
-          <div>
-            <h5>Clinical Relevance</h5>
-            <div className="coefficient-display">{factoryResult.insights.clinicalRelevance}</div>
-            <small>Impact on clinical decision making</small>
-          </div>
-          <div>
-            <h5>Total Correlations</h5>
-            <div className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</div>
-            <small>Significant relationships found</small>
-          </div>
-        </div>
-      </section>
 
       {/* Chart */}
       <section className="chart-container">
