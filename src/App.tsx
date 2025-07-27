@@ -4,9 +4,10 @@ import React, { useState } from "react";
 // Import components
 import Introduction from "./components/Introduction";
 import RatiometricVsBiological from "./components/cardiacScaling/RatiometricVsBiological";
+import MeasurementTypeExplorer from "./components/cardiacScaling/MeasurementTypeExplorer";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"intro" | "scaling">("intro");
+  const [activeTab, setActiveTab] = useState<"intro" | "scaling" | "comprehensive">("intro");
 
   return (
     <div>
@@ -32,7 +33,13 @@ function App() {
             className={`tab-button ${activeTab === "scaling" ? "active" : ""}`}
             onClick={() => setActiveTab("scaling")}
           >
-            📊 Interactive Scaling Analysis
+            📊 2-Way Comparison
+          </button>
+          <button
+            className={`tab-button ${activeTab === "comprehensive" ? "active" : ""}`}
+            onClick={() => setActiveTab("comprehensive")}
+          >
+            🔬 Comprehensive Analysis
           </button>
         </nav>
       </header>
@@ -41,6 +48,7 @@ function App() {
       <main className="container">
         {activeTab === "intro" && <Introduction />}
         {activeTab === "scaling" && <RatiometricVsBiological />}
+        {activeTab === "comprehensive" && <MeasurementTypeExplorer />}
       </main>
 
       {/* Footer */}

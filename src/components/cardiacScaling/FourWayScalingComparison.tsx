@@ -11,7 +11,7 @@ import FormulaSelector, {
   FormulaValuesDisplay 
 } from '@/components/common/FormulaSelector';
 
-// Import the DeweyMethodFactory
+// Import the FIXED DeweyMethodFactory
 import { 
   generateScalingAnalysis,
   getStandardConfigurations,
@@ -20,8 +20,20 @@ import {
 } from './core/DeweyMethodFactory';
 
 // =============================================================================
-// COMPONENT CONFIGURATION
+// ENHANCED COMPONENT INTERFACE
 // =============================================================================
+
+interface CategoryContext {
+  categoryName: string;
+  expectedApproaches: number;
+  scalingInfo: string;
+}
+
+interface FourWayScalingComparisonProps {
+  availableMeasurements?: EnhancedMeasurementData[];
+  initialMeasurement?: string;
+  categoryContext?: CategoryContext;
+}
 
 interface ToggleState {
   [configId: string]: {
@@ -42,7 +54,10 @@ interface ConfigurationDisplay {
   strokeDasharray?: string;
 }
 
-// Color palette for different scaling approaches
+// =============================================================================
+// ENHANCED COLOR PALETTE
+// =============================================================================
+
 const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
   ratiometric_bsa: {
     id: 'ratiometric_bsa',
@@ -63,7 +78,7 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
     id: 'allometric_bsa',
     name: 'Allometric BSA', 
     description: 'Geometric BSA scaling',
-    color: { male: '#059669', female: '#dc2626' },
+    color: { male: '#059669', female: '#10b981' },
     strokeWidth: 3
   },
   allometric_height: {
@@ -75,24 +90,24 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
   },
   height_geometric: {
     id: 'height_geometric',
-    name: 'Height^3.0',
+    name: 'Height Geometric',
     description: 'Theoretical geometric scaling',
     color: { male: '#f59e0b', female: '#f97316' },
     strokeWidth: 2,
     strokeDasharray: '4 2'
   },
-  height_empirical: {
-    id: 'height_empirical', 
-    name: 'Height^2.7',
-    description: 'Empirical scaling from literature',
+  height_16: {
+    id: 'height_16', 
+    name: 'Height^1.6',
+    description: 'Empirical scaling from Strom data',
     color: { male: '#8b5cf6', female: '#a855f7' },
     strokeWidth: 2,
     strokeDasharray: '6 3'
   },
-  height_conservative: {
-    id: 'height_conservative',
-    name: 'Height^1.6', 
-    description: 'Conservative height scaling',
+  height_27: {
+    id: 'height_27',
+    name: 'Height^2.7', 
+    description: 'Empirical scaling from Strom data',
     color: { male: '#06b6d4', female: '#0891b2' },
     strokeWidth: 2,
     strokeDasharray: '2 1'
@@ -130,23 +145,36 @@ const getCorrelationStrength = (correlation: number): string => {
 // MAIN COMPONENT
 // =============================================================================
 
-const FourWayScalingComparison: React.FC = () => {
+const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
+  availableMeasurements = STROM_MEASUREMENTS,
+  initialMeasurement = 'lvdd',
+  categoryContext
+}) => {
   // State
-  const [selectedMeasurementId, setSelectedMeasurementId] = useState('lvdd');
+  const [selectedMeasurementId, setSelectedMeasurementId] = useState(initialMeasurement);
   const [showCorrelations, setShowCorrelations] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
 
   // Formula selection
   const { selection: formulaSelection, callbacks: formulaCallbacks } = useFormulaSelection();
 
-  // Get current measurement
-  const measurement = STROM_MEASUREMENTS.find(m => m.id === selectedMeasurementId);
+  // Get current measurement from available measurements
+  const measurement = availableMeasurements.find(m => m.id === selectedMeasurementId) || availableMeasurements[0];
+
+  // Update selected measurement when initialMeasurement changes (category switching)
+  React.useEffect(() => {
+    if (initialMeasurement && availableMeasurements.find(m => m.id === initialMeasurement)) {
+      setSelectedMeasurementId(initialMeasurement);
+    } else if (availableMeasurements.length > 0) {
+      setSelectedMeasurementId(availableMeasurements[0].id);
+    }
+  }, [initialMeasurement, availableMeasurements]);
 
   // Generate factory result with all configurations
   const factoryResult = useMemo(() => {
     if (!measurement) return null;
 
-    console.log('🔧 4-Way Analysis: Generating comprehensive scaling analysis...');
+    console.log(`🔧 ${categoryContext?.categoryName || 'Analysis'}: Generating scaling analysis for ${measurement.name}...`);
 
     // Get all standard configurations for this measurement type
     const configurations = getStandardConfigurations(measurement.type);
@@ -160,9 +188,9 @@ const FourWayScalingComparison: React.FC = () => {
       generateInsights: true
     });
 
-    console.log(`✅ 4-Way Analysis: ${configurations.length} configurations analyzed`);
+    console.log(`✅ ${categoryContext?.categoryName || 'Analysis'}: ${configurations.length} configurations analyzed`);
     return result;
-  }, [measurement, formulaSelection]);
+  }, [measurement, formulaSelection, categoryContext]);
 
   // Toggle state for showing/hiding lines
   const [toggleState, setToggleState] = useState<ToggleState>(() => {
@@ -247,14 +275,13 @@ const FourWayScalingComparison: React.FC = () => {
   };
 
   return (
-    <div className="container">
-      {/* Header */}
+    <div>
+      {/* Header with category context */}
       <header>
         <hgroup>
-          <h2>4-Way Scaling Comparison</h2>
+          <h3>{categoryContext ? `${categoryContext.categoryName} Analysis` : '4-Way Scaling Comparison'}</h3>
           <p>
-            Comprehensive analysis of all scaling approaches for {measurement.name}. 
-            Toggle configurations to compare different methods.
+            {categoryContext ? categoryContext.scalingInfo : 'Comprehensive analysis of all scaling approaches'} for {measurement.name}
           </p>
         </hgroup>
       </header>
@@ -264,20 +291,22 @@ const FourWayScalingComparison: React.FC = () => {
         <div className="controls-grid">
           {/* Measurement Selection */}
           <div>
-            <label htmlFor="measurement-select">Measurement</label>
+            <label htmlFor="measurement-select">
+              {categoryContext ? `${categoryContext.categoryName} Measurements` : 'Measurement'}
+            </label>
             <select
               id="measurement-select"
               value={selectedMeasurementId}
               onChange={(e) => setSelectedMeasurementId(e.target.value)}
             >
-              {STROM_MEASUREMENTS.map(m => (
+              {availableMeasurements.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.type})
+                  {m.name} ({m.absoluteUnit})
                 </option>
               ))}
             </select>
             <div className="formula-info">
-              {factoryResult.configurations.length} scaling approaches available
+              {factoryResult.configurations.length} scaling approaches • {measurement.type} measurement
             </div>
           </div>
 
@@ -311,7 +340,7 @@ const FourWayScalingComparison: React.FC = () => {
         {/* Configuration Toggles */}
         <div className="controls-grid" style={{ marginTop: '1rem' }}>
           <div style={{ gridColumn: '1 / -1' }}>
-            <h3>Scaling Configurations</h3>
+            <h4>Scaling Configurations</h4>
             <div className="metrics-grid">
               {factoryResult.configurations.map(config => {
                 const display = CONFIGURATION_COLORS[config.id] || {
@@ -328,7 +357,7 @@ const FourWayScalingComparison: React.FC = () => {
 
                 return (
                   <div key={config.id} className="metric-card">
-                    <h4 style={{ margin: '0 0 0.5rem 0' }}>{display.name}</h4>
+                    <h5 style={{ margin: '0 0 0.5rem 0' }}>{display.name}</h5>
                     <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)', margin: '0 0 1rem 0' }}>
                       {display.description}
                     </p>
@@ -379,25 +408,25 @@ const FourWayScalingComparison: React.FC = () => {
 
       {/* Summary Statistics */}
       <section className="insight-info">
-        <h3>Analysis Summary</h3>
+        <h4>Analysis Summary</h4>
         <div className="metrics-grid">
           <div>
-            <h4>Best Performing</h4>
+            <h5>Best Performing</h5>
             <div className="coefficient-display">{factoryResult.insights.bestConfiguration}</div>
             <small>Highest R² × Sex Similarity score</small>
           </div>
           <div>
-            <h4>Recommended</h4>
+            <h5>Recommended</h5>
             <div className="coefficient-display">{factoryResult.insights.recommendedApproach}</div>
             <small>Based on measurement type ({measurement.type})</small>
           </div>
           <div>
-            <h4>Clinical Relevance</h4>
+            <h5>Clinical Relevance</h5>
             <div className="coefficient-display">{factoryResult.insights.clinicalRelevance}</div>
             <small>Impact on clinical decision making</small>
           </div>
           <div>
-            <h4>Total Correlations</h4>
+            <h5>Total Correlations</h5>
             <div className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</div>
             <small>Significant relationships found</small>
           </div>
@@ -407,7 +436,7 @@ const FourWayScalingComparison: React.FC = () => {
       {/* Chart */}
       <section className="chart-container">
         <header>
-          <h3>{measurement.name} - All Scaling Approaches</h3>
+          <h4>{measurement.name} - All Scaling Approaches</h4>
           <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>
             Comparing {factoryResult.configurations.length} different scaling methodologies. 
             Toggle configurations above to show/hide approaches.
@@ -523,7 +552,7 @@ const FourWayScalingComparison: React.FC = () => {
       {showMetrics && (
         <section className="metrics-grid">
           <div style={{ gridColumn: '1 / -1' }}>
-            <h3>Detailed Configuration Metrics</h3>
+            <h4>Detailed Configuration Metrics</h4>
           </div>
           
           {factoryResult.configurations.map(config => {
@@ -534,7 +563,7 @@ const FourWayScalingComparison: React.FC = () => {
             return (
               <article key={config.id} className="metric-card">
                 <header>
-                  <h4>{display?.name || config.name}</h4>
+                  <h5>{display?.name || config.name}</h5>
                 </header>
                 
                 <dl style={{ fontSize: '0.875rem' }}>
@@ -567,7 +596,7 @@ const FourWayScalingComparison: React.FC = () => {
       {/* Correlation Matrix */}
       {showCorrelations && factoryResult.correlationMatrix.significantCorrelations.length > 0 && (
         <section>
-          <h3>Cross-Method Correlations</h3>
+          <h4>Cross-Method Correlations</h4>
           <div className="insight-info">
             <p>
               Correlations between different scaling approaches. High correlations suggest 
@@ -582,9 +611,9 @@ const FourWayScalingComparison: React.FC = () => {
               
               return (
                 <div key={index} className="metric-card">
-                  <h4 style={{ fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>
+                  <h5 style={{ fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>
                     {config1?.name || corr.config1} ↔ {config2?.name || corr.config2}
-                  </h4>
+                  </h5>
                   <div 
                     className="coefficient-display"
                     style={{ 
