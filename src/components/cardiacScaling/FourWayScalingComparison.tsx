@@ -62,20 +62,13 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
   ratiometric_bsa: {
     id: 'ratiometric_bsa',
     name: 'Ratiometric BSA',
-    description: 'Current clinical standard - linear BSA indexing',
+    description: 'Current clinical standard',
     color: { male: '#60a5fa', female: '#f87171' },
-    strokeWidth: 2,
+    strokeWidth: 3,
     strokeDasharray: '8 4'
   },
-  ratiometric_height: {
-    id: 'ratiometric_height',
-    name: 'Ratiometric Height',
-    description: 'Geometrically appropriate for 1D measurements',
-    color: { male: '#10b981', female: '#34d399' },
-    strokeWidth: 3
-  },
   
-  // Allometric approaches (note: allometric_lbm and allometric_height may display as "Ratiometric" when exponent=1.0)
+  // Allometric approaches
   allometric_lbm: {
     id: 'allometric_lbm', 
     name: 'Allometric LBM',
@@ -86,74 +79,37 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
   allometric_bsa: {
     id: 'allometric_bsa',
     name: 'Allometric BSA',
-    description: 'Geometric BSA scaling with appropriate exponent', 
+    description: 'Geometric BSA scaling', 
     color: { male: '#059669', female: '#10b981' },
     strokeWidth: 3
   },
   allometric_height: {
     id: 'allometric_height',
     name: 'Allometric Height',
-    description: 'Standard allometric height scaling', 
+    description: 'Standard height scaling', 
     color: { male: '#7c3aed', female: '#ec4899' },
     strokeWidth: 3
   },
-  
-  // UPDATED: Consistent allometric height naming
-  allometric_height_geometric: {
-    id: 'allometric_height_geometric',
-    name: 'Allometric Height (Theoretical)',
-    description: 'Theoretical geometric allometric scaling',
-    color: { male: '#f59e0b', female: '#f97316' },
-    strokeWidth: 2,
-    strokeDasharray: '4 2'
-  },
   allometric_height_16: {
     id: 'allometric_height_16', 
-    name: 'Allometric Height^1.6',
-    description: 'Empirical allometric scaling from Strom data',
+    name: 'Height^1.6 (Empirical)',
+    description: 'Empirical literature findings',
     color: { male: '#8b5cf6', female: '#a855f7' },
     strokeWidth: 2,
     strokeDasharray: '6 3'
   },
   allometric_height_27: {
     id: 'allometric_height_27',
-    name: 'Allometric Height^2.7', 
-    description: 'Empirical allometric scaling from Strom data',
+    name: 'Height^2.7 (Empirical)', 
+    description: 'Empirical literature findings',
     color: { male: '#06b6d4', female: '#0891b2' },
     strokeWidth: 2,
-    strokeDasharray: '2 1'
+    strokeDasharray: '4 2'
   }
 };
 
 // =============================================================================
-// FORMATTING UTILITIES (unchanged)
-// =============================================================================
-
-const formatCoefficient = (value: number, measurementType: string): string => {
-  if (measurementType === 'linear') return value.toFixed(3);
-  if (measurementType === 'mass' || measurementType === 'volume') return value.toFixed(2);
-  return value.toFixed(2);
-};
-
-const getCorrelationColor = (correlation: number): string => {
-  const abs = Math.abs(correlation);
-  if (abs >= 0.9) return 'var(--cardiac-success)';
-  if (abs >= 0.7) return 'var(--cardiac-primary)'; 
-  if (abs >= 0.5) return 'var(--cardiac-warning)';
-  return 'var(--cardiac-danger)';
-};
-
-const getCorrelationStrength = (correlation: number): string => {
-  const abs = Math.abs(correlation);
-  if (abs >= 0.9) return 'Very Strong';
-  if (abs >= 0.7) return 'Strong';
-  if (abs >= 0.5) return 'Moderate';
-  if (abs >= 0.3) return 'Weak';
-  return 'Very Weak';
-};
-
-// =============================================================================
-// MAIN COMPONENT
+// MAIN COMPONENT - VISUAL FIRST DESIGN
 // =============================================================================
 
 const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
@@ -163,8 +119,8 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 }) => {
   // State
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(initialMeasurement);
-  const [showCorrelations, setShowCorrelations] = useState(false);
-  const [showMetrics, setShowMetrics] = useState(false);
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
+  const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
 
   // Formula selection
   const { selection: formulaSelection, callbacks: formulaCallbacks } = useFormulaSelection();
@@ -203,14 +159,14 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     return result;
   }, [measurement, formulaSelection, categoryContext]);
 
-  // Toggle state for showing/hiding lines
+  // Smart toggle state - start with key approaches visible
   const [toggleState, setToggleState] = useState<ToggleState>(() => {
     if (!factoryResult) return {};
 
     const initialState: ToggleState = {};
     factoryResult.configurations.forEach(config => {
-      // Start with key approaches visible
-      const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm', 'allometric_height'].includes(config.id);
+      // Start with the most impactful comparison: Ratiometric BSA vs Allometric LBM
+      const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm'].includes(config.id);
       initialState[config.id] = {
         male: isKeyApproach,
         female: isKeyApproach
@@ -230,8 +186,8 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         if (existing) {
           newState[config.id] = existing;
         } else {
-          // Default for new configurations
-          const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm', 'allometric_height'].includes(config.id);
+          // Default for new configurations - start with key comparison
+          const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm'].includes(config.id);
           newState[config.id] = {
             male: isKeyApproach,
             female: isKeyApproach
@@ -269,6 +225,32 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     }));
   };
 
+  // Quick action presets
+  const showKeyComparison = () => {
+    const newState: ToggleState = {};
+    factoryResult.configurations.forEach(config => {
+      const isKey = ['ratiometric_bsa', 'allometric_lbm'].includes(config.id);
+      newState[config.id] = { male: isKey, female: isKey };
+    });
+    setToggleState(newState);
+  };
+
+  const showAllApproaches = () => {
+    const newState: ToggleState = {};
+    factoryResult.configurations.forEach(config => {
+      newState[config.id] = { male: true, female: true };
+    });
+    setToggleState(newState);
+  };
+
+  const hideAllApproaches = () => {
+    const newState: ToggleState = {};
+    factoryResult.configurations.forEach(config => {
+      newState[config.id] = { male: false, female: false };
+    });
+    setToggleState(newState);
+  };
+
   // Reference population for display
   const referencePopulation = {
     male: {
@@ -287,28 +269,18 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
   return (
     <div>
-      {/* Header with category context */}
-      <header>
-        <hgroup>
-          <h3>{categoryContext ? `${categoryContext.categoryName} Analysis` : '4-Way Scaling Comparison'}</h3>
-          <p>
-            {categoryContext ? categoryContext.scalingInfo : 'Comprehensive analysis of all scaling approaches'} for {measurement.name}
-          </p>
-        </hgroup>
-      </header>
-
-      {/* Controls */}
-      <section>
-        <div className="controls-grid">
-          {/* Measurement Selection */}
-          <div>
-            <label htmlFor="measurement-select">
-              {categoryContext ? `${categoryContext.categoryName} Measurements` : 'Measurement'}
+      {/* MINIMAL HEADER - Just the essentials */}
+      <header style={{ marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+            <label htmlFor="measurement-select" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>
+              {categoryContext ? `${categoryContext.categoryName}` : 'Measurement'}
             </label>
             <select
               id="measurement-select"
               value={selectedMeasurementId}
               onChange={(e) => setSelectedMeasurementId(e.target.value)}
+              style={{ width: '100%' }}
             >
               {availableMeasurements.map(m => (
                 <option key={m.id} value={m.id}>
@@ -316,157 +288,33 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                 </option>
               ))}
             </select>
-            <div className="formula-info">
-              {factoryResult.configurations.length} scaling approaches • {measurement.type} measurement
-            </div>
           </div>
-
-          {/* View Controls */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button
-              onClick={() => setShowCorrelations(!showCorrelations)}
-              role="button"
-              className={showCorrelations ? '' : 'secondary'}
-            >
-              {showCorrelations ? 'Hide' : 'Show'} Correlations
+          
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button onClick={showKeyComparison} className="button-small">
+              🎯 Key Comparison
             </button>
-            <button
-              onClick={() => setShowMetrics(!showMetrics)}
-              role="button"
-              className={showMetrics ? '' : 'secondary'}
-            >
-              {showMetrics ? 'Hide' : 'Show'} Metrics
+            <button onClick={showAllApproaches} className="button-small secondary">
+              👁️ Show All
+            </button>
+            <button onClick={hideAllApproaches} className="button-small secondary">
+              🫥 Hide All
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Formula Selection */}
-        <FormulaSelector
-          selection={formulaSelection}
-          callbacks={formulaCallbacks}
-          layout="grid"
-          className="mt-1"
-        />
-
-        {/* Configuration Toggles - UPDATED with consistent terminology */}
-        <div className="controls-grid" style={{ marginTop: '1rem' }}>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <h4>Scaling Configurations</h4>
-            <div className="metrics-grid">
-              {factoryResult.configurations.map(config => {
-                const display = CONFIGURATION_COLORS[config.id] || {
-                  id: config.id,
-                  name: config.name,
-                  description: config.description,
-                  color: { male: '#6b7280', female: '#9ca3af' },
-                  strokeWidth: 2
-                };
-
-                const toggles = toggleState[config.id] || { male: false, female: false };
-                const coefficients = factoryResult.coefficients[config.id];
-                const metrics = factoryResult.validationMetrics[config.id];
-
-                return (
-                  <div key={config.id} className="metric-card">
-                    <h5 style={{ margin: '0 0 0.5rem 0' }}>{display.name}</h5>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)', margin: '0 0 0.5rem 0' }}>
-                      {display.description}
-                    </p>
-                    
-                    {/* UPDATED: Show approach classification with display name context */}
-                    <div style={{ fontSize: '0.75rem', margin: '0 0 1rem 0' }}>
-                      <span style={{ 
-                        backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
-                        color: 'white',
-                        padding: '0.125rem 0.25rem',
-                        borderRadius: '0.25rem'
-                      }}>
-                        {config.name} ({config.approach === 'ratiometric' ? 'Ratiometric' : 'Allometric'} calc)
-                      </span>
-                    </div>
-
-                    {/* Toggle Controls */}
-                    <div className="button-group">
-                      <button
-                        onClick={() => toggleAllForConfig(config.id)}
-                        className={toggles.male && toggles.female ? '' : 'secondary'}
-                        style={{ fontSize: '0.875rem' }}
-                      >
-                        {toggles.male && toggles.female ? 'Hide All' : 'Show All'}
-                      </button>
-                      <button
-                        onClick={() => toggleConfiguration(config.id, 'male')}
-                        className={toggles.male ? '' : 'secondary'}
-                        style={{ 
-                          fontSize: '0.875rem',
-                          borderLeft: `3px solid ${display.color.male}`
-                        }}
-                      >
-                        ♂ Male
-                      </button>
-                      <button
-                        onClick={() => toggleConfiguration(config.id, 'female')}
-                        className={toggles.female ? '' : 'secondary'}
-                        style={{ 
-                          fontSize: '0.875rem',
-                          borderLeft: `3px solid ${display.color.female}`
-                        }}
-                      >
-                        ♀ Female
-                      </button>
-                    </div>
-
-                    {/* Quick Stats */}
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                      <div>R² = {metrics.rSquared.toFixed(3)}</div>
-                      <div>Similarity = {coefficients.similarity.percentage.toFixed(1)}%</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Summary Statistics */}
-      <section className="insight-info">
-        <h4>Analysis Summary</h4>
-        <div className="metrics-grid">
-          <div>
-            <h5>Best Performing</h5>
-            <div className="coefficient-display">{factoryResult.insights.bestConfiguration}</div>
-            <small>Highest R² × Sex Similarity score</small>
-          </div>
-          <div>
-            <h5>Recommended</h5>
-            <div className="coefficient-display">{factoryResult.insights.recommendedApproach}</div>
-            <small>Based on measurement type ({measurement.type})</small>
-          </div>
-          <div>
-            <h5>Clinical Relevance</h5>
-            <div className="coefficient-display">{factoryResult.insights.clinicalRelevance}</div>
-            <small>Impact on clinical decision making</small>
-          </div>
-          <div>
-            <h5>Total Correlations</h5>
-            <div className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</div>
-            <small>Significant relationships found</small>
-          </div>
-        </div>
-      </section>
-
-      {/* Chart */}
-      <section className="chart-container">
-        <header>
-          <h4>{measurement.name} - All Scaling Approaches</h4>
-          <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>
-            Comparing {factoryResult.configurations.length} different scaling methodologies. 
-            Toggle configurations above to show/hide approaches. Ratiometric = exponent 1.0, Allometric = exponent ≠ 1.0.
+      {/* HERO CHART - Front and center! */}
+      <section className="chart-container" style={{ marginBottom: '1.5rem' }}>
+        <header style={{ marginBottom: '1rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0' }}>{measurement.name} - Scaling Approaches Comparison</h3>
+          <p style={{ fontSize: '0.9rem', color: 'var(--pico-muted-color)', margin: 0 }}>
+            {categoryContext ? categoryContext.scalingInfo : 'Compare different scaling methodologies'} • 
+            Toggle approaches below chart
           </p>
         </header>
 
-        <ResponsiveContainer width="100%" height={600}>
+        <ResponsiveContainer width="100%" height={500}>
           <LineChart data={factoryResult.chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--pico-border-color)" opacity={0.5} />
             <XAxis 
@@ -492,7 +340,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
               formatter={(value, name) => {
                 if (typeof value !== 'number') return [value, name];
                 
-                // Extract config ID and sex from dataKey
                 const nameStr = String(name);
                 const configId = nameStr.replace('_male', '').replace('_female', '');
                 const sex = nameStr.includes('_male') ? 'Male' : 'Female';
@@ -571,102 +418,176 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </ResponsiveContainer>
       </section>
 
-      {/* Detailed Metrics */}
-      {showMetrics && (
-        <section className="metrics-grid">
-          <div style={{ gridColumn: '1 / -1' }}>
-            <h4>Detailed Configuration Metrics</h4>
-          </div>
-          
+      {/* QUICK TOGGLES - Right after the chart for immediate interaction */}
+      <section style={{ marginBottom: '1.5rem' }}>
+        <h4 style={{ margin: '0 0 1rem 0' }}>Toggle Scaling Approaches</h4>
+        <div className="metrics-grid">
           {factoryResult.configurations.map(config => {
+            const display = CONFIGURATION_COLORS[config.id] || {
+              id: config.id,
+              name: config.name,
+              description: config.description,
+              color: { male: '#6b7280', female: '#9ca3af' },
+              strokeWidth: 2
+            };
+
+            const toggles = toggleState[config.id] || { male: false, female: false };
             const coefficients = factoryResult.coefficients[config.id];
-            const metrics = factoryResult.validationMetrics[config.id];
-            const display = CONFIGURATION_COLORS[config.id];
 
             return (
-              <article key={config.id} className="metric-card">
-                <header>
-                  <h5>{display?.name || config.name}</h5>
-                </header>
+              <div key={config.id} className="metric-card" style={{ padding: '1rem' }}>
+                <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>{display.name}</h5>
                 
-                <dl style={{ fontSize: '0.875rem' }}>
-                  <dt>Approach:</dt>
-                  <dd>
-                    <span style={{ 
-                      backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
-                      color: 'white',
-                      padding: '0.125rem 0.25rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem'
-                    }}>
-                      {config.approach}
-                    </span>
-                  </dd>
-                  <dt>Variable:</dt>
-                  <dd>{config.variable.toUpperCase()}^{config.exponent}</dd>
-                  <dt>R²:</dt>
-                  <dd className="status-excellent">{metrics.rSquared.toFixed(3)}</dd>
-                  <dt>Correlation:</dt>
-                  <dd className="status-excellent">{metrics.correlation.toFixed(3)}</dd>
-                  <dt>Sex Similarity:</dt>
-                  <dd className="status-excellent">{coefficients.similarity.percentage.toFixed(1)}%</dd>
-                  
-                  {config.approach === 'allometric' && coefficients.universal && (
-                    <>
-                      <dt>Universal Coefficient:</dt>
-                      <dd className="coefficient-display">
-                        {formatCoefficient(coefficients.universal, measurement.type)}
-                      </dd>
-                    </>
-                  )}
-                </dl>
-              </article>
-            );
-          })}
-        </section>
-      )}
-
-      {/* Correlation Matrix */}
-      {showCorrelations && factoryResult.correlationMatrix.significantCorrelations.length > 0 && (
-        <section>
-          <h4>Cross-Method Correlations</h4>
-          <div className="insight-info">
-            <p>
-              Correlations between different scaling approaches. High correlations suggest 
-              methods produce similar results, while low correlations indicate fundamental differences.
-              Ratiometric approaches (exponent=1.0) vs Allometric approaches (exponent≠1.0) may show distinct patterns.
-            </p>
-          </div>
-          
-          <div className="metrics-grid">
-            {factoryResult.correlationMatrix.significantCorrelations.map((corr, index) => {
-              const config1 = CONFIGURATION_COLORS[corr.config1];
-              const config2 = CONFIGURATION_COLORS[corr.config2];
-              
-              return (
-                <div key={index} className="metric-card">
-                  <h5 style={{ fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>
-                    {config1?.name || corr.config1} ↔ {config2?.name || corr.config2}
-                  </h5>
-                  <div 
-                    className="coefficient-display"
+                {/* Toggle Controls - Prominent */}
+                <div className="button-group" style={{ marginBottom: '0.75rem' }}>
+                  <button
+                    onClick={() => toggleAllForConfig(config.id)}
+                    className={toggles.male && toggles.female ? '' : 'secondary'}
+                    style={{ fontSize: '0.875rem', fontWeight: 'bold' }}
+                  >
+                    {toggles.male && toggles.female ? '✅ Show Both' : '⬜ Show Both'}
+                  </button>
+                  <button
+                    onClick={() => toggleConfiguration(config.id, 'male')}
+                    className={toggles.male ? '' : 'secondary'}
                     style={{ 
-                      color: getCorrelationColor(corr.correlation),
-                      fontSize: '1.25rem',
-                      marginBottom: '0.5rem'
+                      fontSize: '0.875rem',
+                      borderLeft: `4px solid ${display.color.male}`
                     }}
                   >
-                    {corr.correlation.toFixed(3)}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>
-                    {getCorrelationStrength(corr.correlation)} ({corr.strength})
+                    {toggles.male ? '♂ Male ✓' : '♂ Male'}
+                  </button>
+                  <button
+                    onClick={() => toggleConfiguration(config.id, 'female')}
+                    className={toggles.female ? '' : 'secondary'}
+                    style={{ 
+                      fontSize: '0.875rem',
+                      borderLeft: `4px solid ${display.color.female}`
+                    }}
+                  >
+                    {toggles.female ? '♀ Female ✓' : '♀ Female'}
+                  </button>
+                </div>
+
+                {/* Quick stats */}
+                <div style={{ fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>
+                  <div>Sex Similarity: <strong>{coefficients.similarity.percentage.toFixed(1)}%</strong></div>
+                  <div>{display.description}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+
+      {/* PROGRESSIVE DISCLOSURE - Advanced controls */}
+      <section>
+        <details open={showAdvancedControls} onToggle={(e) => setShowAdvancedControls(e.currentTarget.open)}>
+          <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
+            🔧 Advanced Controls & Formula Selection
+          </summary>
+          
+          <div style={{ marginTop: '1rem' }}>
+            <FormulaSelector
+              selection={formulaSelection}
+              callbacks={formulaCallbacks}
+              layout="grid"
+            />
+            
+            <div style={{ marginTop: '1rem' }}>
+              <FormulaValuesDisplay
+                selection={formulaSelection}
+                referencePopulation={referencePopulation}
+                showDetailed={false}
+              />
+            </div>
+          </div>
+        </details>
+      </section>
+
+      {/* DETAILED METRICS - Optional deep dive */}
+      <section style={{ marginTop: '1.5rem' }}>
+        <details open={showDetailedMetrics} onToggle={(e) => setShowDetailedMetrics(e.currentTarget.open)}>
+          <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
+            📊 Detailed Metrics & Correlations
+          </summary>
+          
+          {showDetailedMetrics && (
+            <div style={{ marginTop: '1rem' }}>
+              {/* Configuration details */}
+              <div className="metrics-grid">
+                {factoryResult.configurations.map(config => {
+                  const coefficients = factoryResult.coefficients[config.id];
+                  const metrics = factoryResult.validationMetrics[config.id];
+                  const display = CONFIGURATION_COLORS[config.id];
+
+                  return (
+                    <article key={config.id} className="metric-card">
+                      <header>
+                        <h5>{display?.name || config.name}</h5>
+                      </header>
+                      
+                      <dl style={{ fontSize: '0.875rem' }}>
+                        <dt>Approach:</dt>
+                        <dd>
+                          <span style={{ 
+                            backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
+                            color: 'white',
+                            padding: '0.125rem 0.25rem',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem'
+                          }}>
+                            {config.approach}
+                          </span>
+                        </dd>
+                        <dt>Variable:</dt>
+                        <dd>{config.variable.toUpperCase()}^{config.exponent}</dd>
+                        <dt>R²:</dt>
+                        <dd className="status-excellent">{metrics.rSquared.toFixed(3)}</dd>
+                        <dt>Sex Similarity:</dt>
+                        <dd className="status-excellent">{coefficients.similarity.percentage.toFixed(1)}%</dd>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Correlations if available */}
+              {factoryResult.correlationMatrix.significantCorrelations.length > 0 && (
+                <div style={{ marginTop: '1.5rem' }}>
+                  <h5>Cross-Method Correlations</h5>
+                  <div className="metrics-grid">
+                    {factoryResult.correlationMatrix.significantCorrelations.slice(0, 6).map((corr, index) => {
+                      const config1 = CONFIGURATION_COLORS[corr.config1];
+                      const config2 = CONFIGURATION_COLORS[corr.config2];
+                      
+                      return (
+                        <div key={index} className="metric-card">
+                          <h6 style={{ fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>
+                            {config1?.name || corr.config1} ↔ {config2?.name || corr.config2}
+                          </h6>
+                          <div 
+                            className="coefficient-display"
+                            style={{ 
+                              color: Math.abs(corr.correlation) > 0.7 ? 'var(--cardiac-success)' : 'var(--cardiac-warning)',
+                              fontSize: '1.1rem'
+                            }}
+                          >
+                            {corr.correlation.toFixed(3)}
+                          </div>
+                          <small>{corr.strength}</small>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              )}
+            </div>
+          )}
+        </details>
+      </section>
+
     </div>
   );
 };
