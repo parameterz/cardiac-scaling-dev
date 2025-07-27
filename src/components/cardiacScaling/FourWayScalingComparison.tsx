@@ -1,6 +1,5 @@
 // src/components/cardiacScaling/FourWayScalingComparison.tsx
 
-"use client";
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
@@ -11,7 +10,7 @@ import FormulaSelector, {
   FormulaValuesDisplay 
 } from '@/components/common/FormulaSelector';
 
-// Import the FIXED DeweyMethodFactory
+// Import the CONSISTENT ALLOMETRIC DeweyMethodFactory
 import { 
   generateScalingAnalysis,
   getStandardConfigurations,
@@ -55,10 +54,11 @@ interface ConfigurationDisplay {
 }
 
 // =============================================================================
-// ENHANCED COLOR PALETTE
+// UPDATED: CONSISTENT ALLOMETRIC COLOR PALETTE
 // =============================================================================
 
 const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
+  // Ratiometric approaches
   ratiometric_bsa: {
     id: 'ratiometric_bsa',
     name: 'Ratiometric BSA',
@@ -67,6 +67,15 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
     strokeWidth: 2,
     strokeDasharray: '8 4'
   },
+  ratiometric_height: {
+    id: 'ratiometric_height',
+    name: 'Ratiometric Height',
+    description: 'Geometrically appropriate for 1D measurements',
+    color: { male: '#10b981', female: '#34d399' },
+    strokeWidth: 3
+  },
+  
+  // Allometric approaches (note: allometric_lbm and allometric_height may display as "Ratiometric" when exponent=1.0)
   allometric_lbm: {
     id: 'allometric_lbm', 
     name: 'Allometric LBM',
@@ -76,38 +85,40 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
   },
   allometric_bsa: {
     id: 'allometric_bsa',
-    name: 'Allometric BSA', 
-    description: 'Geometric BSA scaling',
+    name: 'Allometric BSA',
+    description: 'Geometric BSA scaling with appropriate exponent', 
     color: { male: '#059669', female: '#10b981' },
     strokeWidth: 3
   },
   allometric_height: {
     id: 'allometric_height',
     name: 'Allometric Height',
-    description: 'Pure geometric height scaling', 
+    description: 'Standard allometric height scaling', 
     color: { male: '#7c3aed', female: '#ec4899' },
     strokeWidth: 3
   },
-  height_geometric: {
-    id: 'height_geometric',
-    name: 'Height Geometric',
-    description: 'Theoretical geometric scaling',
+  
+  // UPDATED: Consistent allometric height naming
+  allometric_height_geometric: {
+    id: 'allometric_height_geometric',
+    name: 'Allometric Height (Theoretical)',
+    description: 'Theoretical geometric allometric scaling',
     color: { male: '#f59e0b', female: '#f97316' },
     strokeWidth: 2,
     strokeDasharray: '4 2'
   },
-  height_16: {
-    id: 'height_16', 
-    name: 'Height^1.6',
-    description: 'Empirical scaling from Strom data',
+  allometric_height_16: {
+    id: 'allometric_height_16', 
+    name: 'Allometric Height^1.6',
+    description: 'Empirical allometric scaling from Strom data',
     color: { male: '#8b5cf6', female: '#a855f7' },
     strokeWidth: 2,
     strokeDasharray: '6 3'
   },
-  height_27: {
-    id: 'height_27',
-    name: 'Height^2.7', 
-    description: 'Empirical scaling from Strom data',
+  allometric_height_27: {
+    id: 'allometric_height_27',
+    name: 'Allometric Height^2.7', 
+    description: 'Empirical allometric scaling from Strom data',
     color: { male: '#06b6d4', female: '#0891b2' },
     strokeWidth: 2,
     strokeDasharray: '2 1'
@@ -115,7 +126,7 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
 };
 
 // =============================================================================
-// FORMATTING UTILITIES
+// FORMATTING UTILITIES (unchanged)
 // =============================================================================
 
 const formatCoefficient = (value: number, measurementType: string): string => {
@@ -199,7 +210,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     const initialState: ToggleState = {};
     factoryResult.configurations.forEach(config => {
       // Start with key approaches visible
-      const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm'].includes(config.id);
+      const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm', 'allometric_height'].includes(config.id);
       initialState[config.id] = {
         male: isKeyApproach,
         female: isKeyApproach
@@ -220,7 +231,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           newState[config.id] = existing;
         } else {
           // Default for new configurations
-          const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm'].includes(config.id);
+          const isKeyApproach = ['ratiometric_bsa', 'allometric_lbm', 'allometric_height'].includes(config.id);
           newState[config.id] = {
             male: isKeyApproach,
             female: isKeyApproach
@@ -276,6 +287,15 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
   return (
     <div>
+      {/* Header with category context */}
+      <header>
+        <hgroup>
+          <h3>{categoryContext ? `${categoryContext.categoryName} Analysis` : '4-Way Scaling Comparison'}</h3>
+          <p>
+            {categoryContext ? categoryContext.scalingInfo : 'Comprehensive analysis of all scaling approaches'} for {measurement.name}
+          </p>
+        </hgroup>
+      </header>
 
       {/* Controls */}
       <section>
@@ -328,7 +348,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           className="mt-1"
         />
 
-        {/* Configuration Toggles */}
+        {/* Configuration Toggles - UPDATED with consistent terminology */}
         <div className="controls-grid" style={{ marginTop: '1rem' }}>
           <div style={{ gridColumn: '1 / -1' }}>
             <h4>Scaling Configurations</h4>
@@ -349,9 +369,21 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                 return (
                   <div key={config.id} className="metric-card">
                     <h5 style={{ margin: '0 0 0.5rem 0' }}>{display.name}</h5>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)', margin: '0 0 1rem 0' }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)', margin: '0 0 0.5rem 0' }}>
                       {display.description}
                     </p>
+                    
+                    {/* UPDATED: Show approach classification with display name context */}
+                    <div style={{ fontSize: '0.75rem', margin: '0 0 1rem 0' }}>
+                      <span style={{ 
+                        backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
+                        color: 'white',
+                        padding: '0.125rem 0.25rem',
+                        borderRadius: '0.25rem'
+                      }}>
+                        {config.name} ({config.approach === 'ratiometric' ? 'Ratiometric' : 'Allometric'} calc)
+                      </span>
+                    </div>
 
                     {/* Toggle Controls */}
                     <div className="button-group">
@@ -397,6 +429,32 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </div>
       </section>
 
+      {/* Summary Statistics */}
+      <section className="insight-info">
+        <h4>Analysis Summary</h4>
+        <div className="metrics-grid">
+          <div>
+            <h5>Best Performing</h5>
+            <div className="coefficient-display">{factoryResult.insights.bestConfiguration}</div>
+            <small>Highest R² × Sex Similarity score</small>
+          </div>
+          <div>
+            <h5>Recommended</h5>
+            <div className="coefficient-display">{factoryResult.insights.recommendedApproach}</div>
+            <small>Based on measurement type ({measurement.type})</small>
+          </div>
+          <div>
+            <h5>Clinical Relevance</h5>
+            <div className="coefficient-display">{factoryResult.insights.clinicalRelevance}</div>
+            <small>Impact on clinical decision making</small>
+          </div>
+          <div>
+            <h5>Total Correlations</h5>
+            <div className="coefficient-display">{factoryResult.correlationMatrix.significantCorrelations.length}</div>
+            <small>Significant relationships found</small>
+          </div>
+        </div>
+      </section>
 
       {/* Chart */}
       <section className="chart-container">
@@ -404,7 +462,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           <h4>{measurement.name} - All Scaling Approaches</h4>
           <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>
             Comparing {factoryResult.configurations.length} different scaling methodologies. 
-            Toggle configurations above to show/hide approaches.
+            Toggle configurations above to show/hide approaches. Ratiometric = exponent 1.0, Allometric = exponent ≠ 1.0.
           </p>
         </header>
 
@@ -533,7 +591,17 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                 
                 <dl style={{ fontSize: '0.875rem' }}>
                   <dt>Approach:</dt>
-                  <dd>{config.approach}</dd>
+                  <dd>
+                    <span style={{ 
+                      backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
+                      color: 'white',
+                      padding: '0.125rem 0.25rem',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.75rem'
+                    }}>
+                      {config.approach}
+                    </span>
+                  </dd>
                   <dt>Variable:</dt>
                   <dd>{config.variable.toUpperCase()}^{config.exponent}</dd>
                   <dt>R²:</dt>
@@ -566,6 +634,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
             <p>
               Correlations between different scaling approaches. High correlations suggest 
               methods produce similar results, while low correlations indicate fundamental differences.
+              Ratiometric approaches (exponent=1.0) vs Allometric approaches (exponent≠1.0) may show distinct patterns.
             </p>
           </div>
           

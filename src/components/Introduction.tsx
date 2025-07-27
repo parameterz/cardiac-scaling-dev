@@ -1,6 +1,5 @@
 // src/components/Introduction.tsx
 
-"use client";
 import React from 'react';
 
 const Introduction: React.FC = () => {
@@ -26,7 +25,8 @@ const Introduction: React.FC = () => {
           <h4>Ratiometric Scaling = Linear Relationship (Allometric Exponent 1.0)</h4>
           <p>
             <strong>Ratiometric scaling</strong> is simply division by a scaling variable, creating 
-            a linear relationship through the origin. Mathematically, this is equivalent to <strong>allometric scaling with exponent 1.0</strong>.
+            a linear relationship through the origin. Mathematically, this is equivalent to 
+            <strong>allometric scaling with exponent 1.0</strong>.
           </p>
           
           <div className="insight-info">

@@ -15,13 +15,13 @@ export const BUILD_DATE = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 
  */
 export const VERSION_HISTORY = [
   {
-    version: '0.1.2',
-    date: '2025-07-24',
+    version: '0.2.1',
+    date: '2025-07-26',
     changes: [
-      'adds new BSA/LBM equations',
+      'improved viewer experience with better scaling info',
     ],
     breakingChanges: [],
-    notes: 'implements full suite of BSA/LBM equations for comprehensive scaling analysis',
+    notes: 'introduces 4-way scaling evaluation for all measurements',
   }
 ] as const;
 

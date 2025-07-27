@@ -1,9 +1,12 @@
 // src/components/cardiacScaling/core/DeweyMethodFactory.ts
 
 /**
- * FIXED VERSION: Dewey Method Factory - Universal Cardiac Scaling Analysis Engine
+ * CONSISTENT ALLOMETRIC TERMINOLOGY VERSION: Dewey Method Factory
  * 
- * KEY BUG FIX: Height^1.6 and Height^2.7 back-calculation now uses correct exponents
+ * Fixed terminology:
+ * - All height scaling with exponent ≠ 1.0 is "allometric"
+ * - Secondary classification: "empirical" vs "theoretical/geometric"
+ * - Ratiometric only when exponent = 1.0 AND dimensionally matched
  */
 
 import { 
@@ -182,13 +185,17 @@ const generateCanonicalReferences = (
 };
 
 // =============================================================================
-// PREDEFINED SCALING CONFIGURATIONS (unchanged)
+// UPDATED: CONSISTENT ALLOMETRIC SCALING CONFIGURATIONS
 // =============================================================================
 
+/**
+ * Generate standard scaling configurations with CONSISTENT allometric terminology
+ */
 export const getStandardConfigurations = (measurementType: MeasurementType): ScalingConfiguration[] => {
   const expectedExponents = getScalingExponents(measurementType);
 
   const configs: ScalingConfiguration[] = [
+    // Ratiometric BSA (always uses BSA-indexed data)
     {
       id: 'ratiometric_bsa',
       name: 'Ratiometric BSA',
@@ -198,17 +205,24 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       description: 'Current clinical standard - linear BSA indexing',
       sourceData: 'bsa'
     },
+
+    // Allometric LBM (universal biological - uses BSA-indexed data)
     {
       id: 'allometric_lbm',
-      name: `Allometric LBM^${expectedExponents.lbm}`,
-      approach: 'allometric',
+      name: expectedExponents.lbm === 1.0 
+        ? 'Ratiometric LBM'
+        : `Allometric LBM^${expectedExponents.lbm}`,
+      approach: 'allometric',  // Always use allometric calculation for LBM
       variable: 'lbm',
       exponent: expectedExponents.lbm,
-      description: 'Universal biological scaling based on lean body mass',
+      description: expectedExponents.lbm === 1.0
+        ? 'Geometrically appropriate - both measurement and LBM are 3D/mass'
+        : 'Universal biological scaling based on lean body mass',
       sourceData: 'bsa'
     }
   ];
 
+  // Add BSA allometric ONLY if it's different from ratiometric
   if (measurementType !== 'area') {
     configs.push({
       id: 'allometric_bsa',
@@ -221,73 +235,71 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     });
   }
 
-  configs.push({
-    id: 'allometric_height',
-    name: `Allometric Height^${expectedExponents.height}`,
-    approach: 'allometric',
-    variable: 'height',
-    exponent: expectedExponents.height,
-    description: 'Geometric height scaling',
-    sourceData: 'height'
-  });
+  // Standard height scaling - check if ratiometric (1.0) or allometric (≠1.0)
+  if (expectedExponents.height === 1.0) {
+    // Linear measurements: Height^1.0 is ratiometric (geometrically appropriate)
+    configs.push({
+      id: 'allometric_height',  // Keep same ID for consistency
+      name: 'Ratiometric Height',
+      approach: 'allometric',  // Always use allometric calculation for height (even when exponent=1.0)
+      variable: 'height',
+      exponent: 1.0,
+      description: 'Geometrically appropriate height scaling for 1D measurements',
+      sourceData: 'height'
+    });
+  } else {
+    // Area: Height^2.0, Mass/Volume: Height^3.0 is allometric standard
+    configs.push({
+      id: 'allometric_height',
+      name: `Allometric Height^${expectedExponents.height}`,
+      approach: 'allometric',
+      variable: 'height',
+      exponent: expectedExponents.height,
+      description: measurementType === 'area' 
+        ? 'Geometric ideal allometric height scaling for 2D measurements'
+        : 'Theoretical geometric allometric height scaling for 3D measurements',
+      sourceData: 'height'
+    });
+  }
 
+  // Add empirical allometric height options for area/mass/volume measurements
   if (measurementType === 'area' || measurementType === 'mass' || measurementType === 'volume') {
     configs.push(
       {
-        id: 'height_16',
-        name: 'Height^1.6 (Empirical)',
+        id: 'allometric_height_16',
+        name: 'Allometric Height^1.6 (Empirical)',
         approach: 'allometric',
         variable: 'height',
         exponent: 1.6,
-        description: 'Empirical height scaling from literature',
+        description: 'Empirical allometric height scaling from literature',
         sourceData: 'height16'
       },
       {
-        id: 'height_27',
-        name: 'Height^2.7 (Empirical)',
+        id: 'allometric_height_27',
+        name: 'Allometric Height^2.7 (Empirical)',
         approach: 'allometric',
         variable: 'height',
         exponent: 2.7,
-        description: 'Empirical height scaling from literature',
+        description: 'Empirical allometric height scaling from literature',
         sourceData: 'height27'
       }
     );
   }
 
-  if (measurementType === 'mass' || measurementType === 'volume') {
-    configs.push({
-      id: 'height_geometric',
-      name: 'Height^3.0 (Theoretical)',
-      approach: 'allometric',
-      variable: 'height',
-      exponent: 3.0,
-      description: 'Theoretical geometric scaling for 3D measurements',
-      sourceData: 'height'
-    });
-  }
-
-  if (measurementType === 'area') {
-    configs.push({
-      id: 'height_geometric',
-      name: 'Height^2.0 (Theoretical)',
-      approach: 'allometric',
-      variable: 'height',
-      exponent: 2.0,
-      description: 'Theoretical geometric scaling for 2D measurements',
-      sourceData: 'height'
-    });
-  }
+  // No separate "theoretical" configuration needed since:
+  // - For areas: Height^2.0 IS the geometric ideal (standard = theoretical)
+  // - For mass/volume: Height^3.0 IS the theoretical geometric (standard = theoretical)
 
   return configs;
 };
 
 // =============================================================================
-// FIXED: COEFFICIENT CALCULATION - HEIGHT EXPONENT BUG FIX
+// COEFFICIENT CALCULATION (unchanged logic, updated comments)
 // =============================================================================
 
 /**
- * FIXED: Calculate scaling coefficients using proper source data and exponents
- * 🐛 BUG FIX: Height^1.6 and Height^2.7 now use correct powered heights for back-calculation
+ * Calculate scaling coefficients using proper source data and exponents
+ * Updated to handle consistent allometric terminology
  */
 const calculateCoefficients = (
   measurement: EnhancedMeasurementData,
@@ -295,7 +307,7 @@ const calculateCoefficients = (
   referencePopulations: DeweyMethodResult['referencePopulations']
 ): ScalingCoefficients => {
   
-  // Step 1 - Get indexed reference values from CORRECT source (unchanged)
+  // Step 1 - Get indexed reference values from CORRECT source
   const getIndexedValues = (sex: Sex) => {
     const data = measurement[sex];
     
@@ -318,18 +330,17 @@ const calculateCoefficients = (
   const maleIndexed = getIndexedValues('male');
   const femaleIndexed = getIndexedValues('female');
 
-  // 🐛 FIXED: Step 2 - Back-calculate absolute values using CORRECT scaling variable
+  // Step 2: Back-calculate absolute values using CORRECT scaling variable
   const getBackCalculationVariable = (sex: Sex) => {
     const pop = referencePopulations[sex];
-    const heightInMeters = pop.height / 100;
     
     switch (configuration.sourceData) {
       case 'height':
-        return heightInMeters; // height^1.0
+        return pop.height / 100; // Convert to meters
       case 'height16':
-        return Math.pow(heightInMeters, 1.6); // 🔧 FIX: height^1.6
+        return Math.pow(pop.height / 100, 1.6); // Height^1.6 in meters
       case 'height27':
-        return Math.pow(heightInMeters, 2.7); // 🔧 FIX: height^2.7
+        return Math.pow(pop.height / 100, 2.7); // Height^2.7 in meters
       case 'bsa':
       default:
         return pop.bsa;
@@ -341,11 +352,6 @@ const calculateCoefficients = (
   
   const maleAbsolute = maleIndexed * maleBackCalcVar;
   const femaleAbsolute = femaleIndexed * femaleBackCalcVar;
-
-  console.log(`🔧 Coefficient calculation for ${configuration.id}:`);
-  console.log(`   Male indexed: ${maleIndexed.toFixed(3)} -> absolute: ${maleAbsolute.toFixed(2)}`);
-  console.log(`   Female indexed: ${femaleIndexed.toFixed(3)} -> absolute: ${femaleAbsolute.toFixed(2)}`);
-  console.log(`   Back-calc variables: M=${maleBackCalcVar.toFixed(3)}, F=${femaleBackCalcVar.toFixed(3)}`);
 
   if (configuration.approach === 'ratiometric') {
     // Ratiometric: coefficients are the indexed values themselves
@@ -375,9 +381,6 @@ const calculateCoefficients = (
     const maleCoefficient = maleAbsolute / Math.pow(maleScalingValue, configuration.exponent);
     const femaleCoefficient = femaleAbsolute / Math.pow(femaleScalingValue, configuration.exponent);
 
-    console.log(`   Scaling values: M=${maleScalingValue.toFixed(3)}^${configuration.exponent}, F=${femaleScalingValue.toFixed(3)}^${configuration.exponent}`);
-    console.log(`   Coefficients: M=${maleCoefficient.toFixed(3)}, F=${femaleCoefficient.toFixed(3)}`);
-
     // Universal coefficient ONLY for LBM (biological scaling)
     const shouldUseUniversal = configuration.variable === 'lbm';
     const universalCoefficient = shouldUseUniversal ? (maleCoefficient + femaleCoefficient) / 2 : undefined;
@@ -398,7 +401,7 @@ const calculateCoefficients = (
 };
 
 // =============================================================================
-// REST OF THE CODE (unchanged - population generation, validation, etc.)
+// POPULATION GENERATION & CHART DATA (unchanged)
 // =============================================================================
 
 const generatePopulationData = (
@@ -705,9 +708,9 @@ const generateInsights = (
 
   let recommendedApproach = 'allometric_lbm';
   if (measurement.type === 'area') {
-    recommendedApproach = 'ratiometric_bsa';
+    recommendedApproach = 'ratiometric_bsa'; // Same as allometric BSA^1.0
   } else if (measurement.type === 'linear') {
-    recommendedApproach = 'allometric_lbm';
+    recommendedApproach = 'allometric_height'; // Uses consistent ID
   }
 
   const lbmSimilarity = coefficients['allometric_lbm']?.similarity.percentage || 0;
@@ -735,8 +738,6 @@ export const generateScalingAnalysis = (
 ): DeweyMethodResult => {
   const scalingConfigurations = configurations || getStandardConfigurations(measurement.type);
   const referencePopulations = generateCanonicalReferences(formulaSelection);
-  
-  console.log(`🔧 Starting scaling analysis for ${measurement.name} (${measurement.type})`);
   
   const coefficients: Record<string, ScalingCoefficients> = {};
   scalingConfigurations.forEach(config => {
@@ -800,12 +801,16 @@ export const generateQuickComparison = (
       sourceData: 'bsa'
     },
     {
-      id: 'allometric_lbm',
-      name: `Allometric LBM^${expectedExponent}`,
-      approach: 'allometric',
+      id: 'allometric_lbm',  // Keep same ID
+      name: expectedExponent === 1.0 
+        ? 'Ratiometric LBM'
+        : `Allometric LBM^${expectedExponent}`,
+      approach: 'allometric',  // Always use allometric calculation for LBM
       variable: 'lbm',
       exponent: expectedExponent,
-      description: 'Universal biological scaling',
+      description: expectedExponent === 1.0
+        ? 'Geometrically appropriate scaling'
+        : 'Universal biological scaling',
       sourceData: 'bsa'
     }
   ];
