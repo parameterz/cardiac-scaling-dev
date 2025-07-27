@@ -15,13 +15,13 @@ export const BUILD_DATE = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 
  */
 export const VERSION_HISTORY = [
   {
-    version: '0.2.1',
-    date: '2025-07-26',
+    version: '0.2.2',
+    date: '2025-07-27',
     changes: [
-      'improved viewer experience with better scaling info',
+      'improved viewer experience with visualization-first approach',
     ],
     breakingChanges: [],
-    notes: 'introduces 4-way scaling evaluation for all measurements',
+    notes: 'Minimized editorilaizing, re-arranged components for visualization-first approach',
   }
 ] as const;
 
