@@ -1,21 +1,13 @@
 // src/components/cardiacScaling/core/DeweyMethodFactory.ts
 
 /**
- * Dewey Method Factory - Universal Cardiac Scaling Analysis Engine
+ * FIXED VERSION: Dewey Method Factory - Universal Cardiac Scaling Analysis Engine
  * 
- * This is the core engine that implements the Dewey methodology for coefficient
- * derivation and enables comprehensive scaling comparisons across all approaches:
- * - Ratiometric BSA (current clinical standard)
- * - Allometric LBM (universal biological scaling)
- * - Allometric BSA (geometric scaling)
- * - Allometric Height (pure geometric scaling)
- * 
- * Key Features:
- * - BMI 24 canonical reference populations (178cm♂, 164cm♀)
- * - Cross-method correlation analysis
- * - Population generation across physiological ranges
- * - Validation against published literature
- * - Support for all measurement types (1D/2D/3D)
+ * Key Fixes:
+ * 1. Fix BSA allometric calculation (use proper geometric exponents)
+ * 2. Add Height^1.6 and Height^2.7 scaling options 
+ * 3. Use correct source data (height-indexed when available)
+ * 4. Sex-specific coefficients for BSA/Height, Universal for LBM
  */
 
 import { 
@@ -51,6 +43,7 @@ export interface ScalingConfiguration {
   variable: ScalingVariable;
   exponent: number;
   description: string;
+  sourceData?: 'bsa' | 'height' | 'height16' | 'height27';  // NEW: Which Strom data to use
 }
 
 export interface PopulationPoint {
@@ -86,7 +79,7 @@ export interface ValidationMetrics {
 }
 
 export interface ChartDataPoint {
-  scalingValue: number; // For chart display, this is ALWAYS BSA regardless of configuration
+  scalingValue: number; // Always BSA for chart X-axis
   [key: string]: number | undefined; // Dynamic keys for each configuration
 }
 
@@ -136,18 +129,11 @@ export interface AnalysisOptions {
 // CANONICAL REFERENCE POPULATIONS (BMI 24 STANDARD)
 // =============================================================================
 
-/**
- * Canonical reference populations using BMI 24 standard
- * This ensures unbiased scaling relationships without weight-related cardiac adaptations
- */
 const CANONICAL_REFERENCE_BASE = {
-  male: { height: 178, bmi: 24, weight: 76.1 },    // BMI 24 at 178cm
-  female: { height: 164, bmi: 24, weight: 64.6 }   // BMI 24 at 164cm
+  male: { height: 178, bmi: 24, weight: 76.1 },
+  female: { height: 164, bmi: 24, weight: 64.6 }
 };
 
-/**
- * Generate canonical reference populations with calculated BSA/LBM
- */
 const generateCanonicalReferences = (
   formulaSelection: FormulaSelectionState
 ): DeweyMethodResult['referencePopulations'] => {
@@ -200,109 +186,172 @@ const generateCanonicalReferences = (
 };
 
 // =============================================================================
-// PREDEFINED SCALING CONFIGURATIONS
+// FIXED: PREDEFINED SCALING CONFIGURATIONS
 // =============================================================================
 
 /**
- * Generate standard scaling configurations based on measurement type
+ * FIXED: Generate standard scaling configurations with proper source data
  */
 export const getStandardConfigurations = (measurementType: MeasurementType): ScalingConfiguration[] => {
   const expectedExponents = getScalingExponents(measurementType);
 
   const configs: ScalingConfiguration[] = [
-    // Ratiometric BSA (current clinical standard)
+    // Ratiometric BSA (always uses BSA-indexed data)
     {
       id: 'ratiometric_bsa',
       name: 'Ratiometric BSA',
       approach: 'ratiometric',
       variable: 'bsa',
       exponent: 1.0,
-      description: 'Current clinical standard - linear BSA indexing'
+      description: 'Current clinical standard - linear BSA indexing',
+      sourceData: 'bsa'
     },
 
-    // Allometric LBM (universal biological)
+    // Allometric LBM (universal biological - uses BSA-indexed data)
     {
       id: 'allometric_lbm',
       name: `Allometric LBM^${expectedExponents.lbm}`,
       approach: 'allometric',
       variable: 'lbm',
       exponent: expectedExponents.lbm,
-      description: 'Universal biological scaling based on lean body mass'
-    },
+      description: 'Universal biological scaling based on lean body mass',
+      sourceData: 'bsa'
+    }
+  ];
 
-    // Allometric BSA (geometric)
-    {
+  // Add BSA allometric ONLY if it's different from ratiometric
+  if (measurementType !== 'area') {
+    configs.push({
       id: 'allometric_bsa',
       name: `Allometric BSA^${expectedExponents.bsa}`,
       approach: 'allometric',
       variable: 'bsa',
       exponent: expectedExponents.bsa,
-      description: 'Geometric scaling using body surface area'
-    },
+      description: 'Geometric scaling using body surface area',
+      sourceData: 'bsa'
+    });
+  }
 
-    // Allometric Height (pure geometric)
-    {
-      id: 'allometric_height',
-      name: `Allometric Height^${expectedExponents.height}`,
-      approach: 'allometric',
-      variable: 'height',
-      exponent: expectedExponents.height,
-      description: 'Pure geometric scaling using height'
-    }
-  ];
+  // Height^1.0 (use height-indexed data when available)
+  configs.push({
+    id: 'allometric_height',
+    name: `Allometric Height^${expectedExponents.height}`,
+    approach: 'allometric',
+    variable: 'height',
+    exponent: expectedExponents.height,
+    description: 'Geometric height scaling',
+    sourceData: 'height'  // Use height-indexed data
+  });
 
-  // Add additional height exponents for mass/volume measurements
-  if (measurementType === 'mass' || measurementType === 'volume') {
+  // NEW: Add Height^1.6 and Height^2.7 for area/volume measurements
+  if (measurementType === 'area' || measurementType === 'mass' || measurementType === 'volume') {
     configs.push(
       {
-        id: 'height_geometric',
-        name: 'Height^3.0 (Theoretical)',
+        id: 'height_16',
+        name: 'Height^1.6 (Empirical)',
         approach: 'allometric',
         variable: 'height',
-        exponent: 3.0,
-        description: 'Theoretical geometric scaling for 3D measurements'
+        exponent: 1.6,
+        description: 'Empirical height scaling from literature',
+        sourceData: 'height16'  // Use height16-indexed data from Strom
       },
       {
-        id: 'height_empirical',
+        id: 'height_27',
         name: 'Height^2.7 (Empirical)',
         approach: 'allometric',
         variable: 'height',
         exponent: 2.7,
-        description: 'Empirically derived scaling for 3D measurements'
-      },
-      {
-        id: 'height_conservative',
-        name: 'Height^1.6 (Conservative)',
-        approach: 'allometric',
-        variable: 'height',
-        exponent: 1.6,
-        description: 'Conservative scaling approach for 3D measurements'
+        description: 'Empirical height scaling from literature',
+        sourceData: 'height27'  // Use height27-indexed data from Strom
       }
     );
+  }
+
+  // Add theoretical Height^3.0 for mass/volume only
+  if (measurementType === 'mass' || measurementType === 'volume') {
+    configs.push({
+      id: 'height_geometric',
+      name: 'Height^3.0 (Theoretical)',
+      approach: 'allometric',
+      variable: 'height',
+      exponent: 3.0,
+      description: 'Theoretical geometric scaling for 3D measurements',
+      sourceData: 'height'  // Use regular height data, derive coefficient
+    });
+  }
+
+  // Add theoretical Height^2.0 for areas only  
+  if (measurementType === 'area') {
+    configs.push({
+      id: 'height_geometric',
+      name: 'Height^2.0 (Theoretical)',
+      approach: 'allometric',
+      variable: 'height',
+      exponent: 2.0,
+      description: 'Theoretical geometric scaling for 2D measurements',
+      sourceData: 'height'  // Use regular height data, derive coefficient
+    });
   }
 
   return configs;
 };
 
 // =============================================================================
-// COEFFICIENT CALCULATION (DEWEY METHODOLOGY)
+// FIXED: COEFFICIENT CALCULATION (DEWEY METHODOLOGY)
 // =============================================================================
 
 /**
- * Calculate scaling coefficients using the Dewey methodology
+ * FIXED: Calculate scaling coefficients using proper source data and exponents
  */
 const calculateCoefficients = (
   measurement: EnhancedMeasurementData,
   configuration: ScalingConfiguration,
   referencePopulations: DeweyMethodResult['referencePopulations']
 ): ScalingCoefficients => {
-  // Step 1: Get indexed reference values (97.5th percentile - ULN)
-  const maleIndexed = measurement.male.bsa.mean + 1.96 * measurement.male.bsa.sd;
-  const femaleIndexed = measurement.female.bsa.mean + 1.96 * measurement.female.bsa.sd;
+  
+  // FIXED: Step 1 - Get indexed reference values from CORRECT source
+  const getIndexedValues = (sex: Sex) => {
+    const data = measurement[sex];
+    
+    switch (configuration.sourceData) {
+      case 'height':
+        if (!data.height) throw new Error(`Height data not available for ${measurement.name}`);
+        return data.height.mean + 1.96 * data.height.sd;
+      case 'height16':
+        if (!data.height16) throw new Error(`Height^1.6 data not available for ${measurement.name}`);
+        return data.height16.mean + 1.96 * data.height16.sd;
+      case 'height27':
+        if (!data.height27) throw new Error(`Height^2.7 data not available for ${measurement.name}`);
+        return data.height27.mean + 1.96 * data.height27.sd;
+      case 'bsa':
+      default:
+        return data.bsa.mean + 1.96 * data.bsa.sd;
+    }
+  };
 
-  // Step 2: Back-calculate absolute values
-  const maleAbsolute = maleIndexed * referencePopulations.male.bsa;
-  const femaleAbsolute = femaleIndexed * referencePopulations.female.bsa;
+  const maleIndexed = getIndexedValues('male');
+  const femaleIndexed = getIndexedValues('female');
+
+  // Step 2: Back-calculate absolute values using CORRECT scaling variable
+  const getBackCalculationVariable = (sex: Sex) => {
+    const pop = referencePopulations[sex];
+    
+    switch (configuration.sourceData) {
+      case 'height':
+      case 'height16': 
+      case 'height27':
+        return pop.height / 100; // Convert to meters
+      case 'bsa':
+      default:
+        return pop.bsa;
+    }
+  };
+
+  const maleBackCalcVar = getBackCalculationVariable('male');
+  const femaleBackCalcVar = getBackCalculationVariable('female');
+  
+  const maleAbsolute = maleIndexed * maleBackCalcVar;
+  const femaleAbsolute = femaleIndexed * femaleBackCalcVar;
 
   if (configuration.approach === 'ratiometric') {
     // Ratiometric: coefficients are the indexed values themselves
@@ -315,7 +364,7 @@ const calculateCoefficients = (
       }
     };
   } else {
-    // Allometric: calculate coefficients using scaling formula
+    // FIXED: Allometric calculation with proper scaling values
     const getScalingValue = (sex: Sex) => {
       const pop = referencePopulations[sex];
       switch (configuration.variable) {
@@ -332,7 +381,10 @@ const calculateCoefficients = (
     const maleCoefficient = maleAbsolute / Math.pow(maleScalingValue, configuration.exponent);
     const femaleCoefficient = femaleAbsolute / Math.pow(femaleScalingValue, configuration.exponent);
 
-    const universalCoefficient = (maleCoefficient + femaleCoefficient) / 2;
+    // Universal coefficient ONLY for LBM (biological scaling)
+    const shouldUseUniversal = configuration.variable === 'lbm';
+    const universalCoefficient = shouldUseUniversal ? (maleCoefficient + femaleCoefficient) / 2 : undefined;
+    
     const absoluteDifference = Math.abs(maleCoefficient - femaleCoefficient);
     const relativeDifference = (absoluteDifference / Math.max(maleCoefficient, femaleCoefficient)) * 100;
 
@@ -349,12 +401,9 @@ const calculateCoefficients = (
 };
 
 // =============================================================================
-// POPULATION GENERATION
+// POPULATION GENERATION & CHART DATA (Keep existing logic)
 // =============================================================================
 
-/**
- * Generate population data across physiological ranges
- */
 const generatePopulationData = (
   configuration: ScalingConfiguration,
   coefficients: ScalingCoefficients,
@@ -362,8 +411,8 @@ const generatePopulationData = (
   options: AnalysisOptions
 ): { male: PopulationPoint[]; female: PopulationPoint[] } => {
   const range = options.populationRange || {
-    height: { min: 120, max: 220, step: 1 }, // 1cm steps for smooth curves
-    bmi: { min: 24, max: 24, step: 1 } // Fixed BMI for clean curves
+    height: { min: 120, max: 220, step: 1 },
+    bmi: { min: 24, max: 24, step: 1 }
   };
 
   const populations = { male: [] as PopulationPoint[], female: [] as PopulationPoint[] };
@@ -387,7 +436,7 @@ const generatePopulationData = (
         switch (configuration.variable) {
           case 'bsa': scalingValue = bsa; break;
           case 'lbm': scalingValue = lbm; break;
-          case 'height': scalingValue = height / 100; break; // Convert to meters
+          case 'height': scalingValue = height / 100; break;
           default: scalingValue = bsa;
         }
 
@@ -396,7 +445,10 @@ const generatePopulationData = (
         if (configuration.approach === 'ratiometric') {
           measurementValue = coefficients[sex] * scalingValue;
         } else {
-          const coefficient = coefficients.universal || coefficients[sex];
+          // Use universal coefficient for LBM, sex-specific for others
+          const coefficient = (configuration.variable === 'lbm' && coefficients.universal) 
+            ? coefficients.universal 
+            : coefficients[sex];
           measurementValue = coefficient * Math.pow(scalingValue, configuration.exponent);
         }
 
@@ -410,7 +462,7 @@ const generatePopulationData = (
           measurementValue,
           metadata: {
             bmiCategory: getBMICategory(bmi),
-            ageCategory: 'adult' // Future expansion
+            ageCategory: 'adult'
           }
         });
       }
@@ -420,9 +472,6 @@ const generatePopulationData = (
   return populations;
 };
 
-/**
- * Helper function to categorize BMI
- */
 const getBMICategory = (bmi: number): string => {
   if (bmi < 18.5) return 'underweight';
   if (bmi < 25) return 'normal';
@@ -432,20 +481,11 @@ const getBMICategory = (bmi: number): string => {
   return 'obese_3';
 };
 
-// =============================================================================
-// CHART DATA GENERATION
-// =============================================================================
-
-/**
- * Generate chart data combining all configurations
- * SIMPLE APPROACH: Use population data directly, no interpolation
- */
 const generateChartData = (
   configurations: ScalingConfiguration[],
   populationData: Record<string, { male: PopulationPoint[]; female: PopulationPoint[] }>,
   coefficients: Record<string, ScalingCoefficients>
 ): ChartDataPoint[] => {
-  // Collect all BSA values from population data
   const bsaToDataMap = new Map<number, ChartDataPoint>();
   
   // Add origin point for ratiometric lines
@@ -461,60 +501,38 @@ const generateChartData = (
   });
   bsaToDataMap.set(0, originPoint);
 
-  // Process population data directly - no interpolation!
+  // Process population data
   configurations.forEach(config => {
     const data = populationData[config.id];
     const configCoefficients = coefficients[config.id];
     
     if (data && configCoefficients) {
-      // Process male population
-      data.male.forEach(point => {
-        const bsa = Math.round(point.bsa * 100) / 100; // Round to 2 decimals
-        
-        if (!bsaToDataMap.has(bsa)) {
-          bsaToDataMap.set(bsa, { scalingValue: bsa });
-        }
-        
-        const chartPoint = bsaToDataMap.get(bsa)!;
-        
-        if (config.approach === 'ratiometric') {
-          // Ratiometric: linear from coefficient
-          chartPoint[`${config.id}_male`] = configCoefficients.male * bsa;
-        } else {
-          // Biological: use actual population data
-          chartPoint[`${config.id}_male`] = point.measurementValue;
-        }
-      });
-      
-      // Process female population
-      data.female.forEach(point => {
-        const bsa = Math.round(point.bsa * 100) / 100; // Round to 2 decimals
-        
-        if (!bsaToDataMap.has(bsa)) {
-          bsaToDataMap.set(bsa, { scalingValue: bsa });
-        }
-        
-        const chartPoint = bsaToDataMap.get(bsa)!;
-        
-        if (config.approach === 'ratiometric') {
-          // Ratiometric: linear from coefficient
-          chartPoint[`${config.id}_female`] = configCoefficients.female * bsa;
-        } else {
-          // Biological: use actual population data
-          chartPoint[`${config.id}_female`] = point.measurementValue;
-        }
+      // Process both sexes
+      (['male', 'female'] as const).forEach(sex => {
+        data[sex].forEach(point => {
+          const bsa = Math.round(point.bsa * 100) / 100;
+          
+          if (!bsaToDataMap.has(bsa)) {
+            bsaToDataMap.set(bsa, { scalingValue: bsa });
+          }
+          
+          const chartPoint = bsaToDataMap.get(bsa)!;
+          
+          if (config.approach === 'ratiometric') {
+            chartPoint[`${config.id}_${sex}`] = configCoefficients[sex] * bsa;
+          } else {
+            chartPoint[`${config.id}_${sex}`] = point.measurementValue;
+          }
+        });
       });
     }
   });
 
-  // Convert map to sorted array
+  // Convert and extend for ratiometric lines
   const chartData = Array.from(bsaToDataMap.values()).sort((a, b) => a.scalingValue - b.scalingValue);
-  
-  // Extend ratiometric lines to chart max if needed
   const maxBSA = Math.max(...chartData.map(p => p.scalingValue));
   const extendTo = Math.max(3.5, maxBSA);
   
-  // Add a few extension points for ratiometric lines only
   for (let bsa = Math.ceil(maxBSA * 10) / 10; bsa <= extendTo; bsa += 0.1) {
     const point: ChartDataPoint = { scalingValue: bsa };
     
@@ -525,7 +543,6 @@ const generateChartData = (
           point[`${config.id}_male`] = configCoefficients.male * bsa;
           point[`${config.id}_female`] = configCoefficients.female * bsa;
         } else {
-          // Biological curves don't extend beyond population
           point[`${config.id}_male`] = undefined;
           point[`${config.id}_female`] = undefined;
         }
@@ -538,69 +555,31 @@ const generateChartData = (
   return chartData.sort((a, b) => a.scalingValue - b.scalingValue);
 };
 
-/**
- * Find the closest population point for a given scaling value
- */
-const findClosestPoint = (points: PopulationPoint[], targetScalingValue: number): PopulationPoint | null => {
-  if (points.length === 0) return null;
-
-  return points.reduce((closest, current) => {
-    const currentDiff = Math.abs(current.scalingValue - targetScalingValue);
-    const closestDiff = Math.abs(closest.scalingValue - targetScalingValue);
-    return currentDiff < closestDiff ? current : closest;
-  });
-};
-
-/**
- * FIXED: Find the closest population point for a given BSA value
- * This ensures chart X-axis is always BSA regardless of scaling method
- */
-const findClosestPointByBSA = (points: PopulationPoint[], targetBSA: number): PopulationPoint | null => {
-  if (points.length === 0) return null;
-
-  return points.reduce((closest, current) => {
-    const currentDiff = Math.abs(current.bsa - targetBSA);
-    const closestDiff = Math.abs(closest.bsa - targetBSA);
-    return currentDiff < closestDiff ? current : closest;
-  });
-};
-
 // =============================================================================
-// VALIDATION METRICS
+// VALIDATION & CORRELATION (Keep existing)
 // =============================================================================
 
-/**
- * Calculate validation metrics for each configuration
- */
 const calculateValidationMetrics = (
   configuration: ScalingConfiguration,
   coefficients: ScalingCoefficients,
   populationData: { male: PopulationPoint[]; female: PopulationPoint[] },
   measurement: EnhancedMeasurementData
 ): ValidationMetrics => {
-  // Calculate R-squared for the scaling relationship
   const allPoints = [...populationData.male, ...populationData.female];
   
   if (allPoints.length === 0) {
-    return {
-      rSquared: 0,
-      correlation: 0,
-      meanAbsoluteError: 0,
-      coefficientOfVariation: 0
-    };
+    return { rSquared: 0, correlation: 0, meanAbsoluteError: 0, coefficientOfVariation: 0 };
   }
 
-  // Calculate correlation
   const xValues = allPoints.map(p => p.scalingValue);
   const yValues = allPoints.map(p => p.measurementValue);
   
   const correlation = calculateCorrelation(xValues, yValues);
   const rSquared = correlation * correlation;
 
-  // Calculate mean absolute error
   const predictions = xValues.map(x => {
     if (configuration.approach === 'ratiometric') {
-      return (coefficients.male + coefficients.female) / 2 * x; // Average coefficient for ratiometric
+      return (coefficients.male + coefficients.female) / 2 * x;
     } else {
       const coefficient = coefficients.universal || (coefficients.male + coefficients.female) / 2;
       return coefficient * Math.pow(x, configuration.exponent);
@@ -610,23 +589,14 @@ const calculateValidationMetrics = (
   const absoluteErrors = yValues.map((y, i) => Math.abs(y - predictions[i]));
   const meanAbsoluteError = absoluteErrors.reduce((sum, err) => sum + err, 0) / absoluteErrors.length;
 
-  // Calculate coefficient of variation
   const mean = yValues.reduce((sum, y) => sum + y, 0) / yValues.length;
   const variance = yValues.reduce((sum, y) => sum + Math.pow(y - mean, 2), 0) / yValues.length;
   const standardDeviation = Math.sqrt(variance);
   const coefficientOfVariation = mean > 0 ? (standardDeviation / mean) * 100 : 0;
 
-  return {
-    rSquared,
-    correlation,
-    meanAbsoluteError,
-    coefficientOfVariation
-  };
+  return { rSquared, correlation, meanAbsoluteError, coefficientOfVariation };
 };
 
-/**
- * Calculate Pearson correlation coefficient
- */
 const calculateCorrelation = (x: number[], y: number[]): number => {
   if (x.length !== y.length || x.length === 0) return 0;
 
@@ -643,21 +613,12 @@ const calculateCorrelation = (x: number[], y: number[]): number => {
   return denominator === 0 ? 0 : numerator / denominator;
 };
 
-// =============================================================================
-// CORRELATION MATRIX ANALYSIS
-// =============================================================================
-
-/**
- * Calculate cross-method correlation matrix
- */
 const calculateCorrelationMatrix = (
   configurations: ScalingConfiguration[],
   populationData: Record<string, { male: PopulationPoint[]; female: PopulationPoint[] }>
 ): CorrelationMatrix => {
   const configIds = configurations.map(c => c.id);
   const matrix: number[][] = [];
-
-  // Extract measurement values for each configuration
   const configurationMeasurements: Record<string, number[]> = {};
   
   configIds.forEach(configId => {
@@ -667,15 +628,11 @@ const calculateCorrelationMatrix = (
     }
   });
 
-  // Calculate correlation matrix
   configIds.forEach((id1, i) => {
     matrix[i] = [];
     configIds.forEach((id2, j) => {
       if (configurationMeasurements[id1] && configurationMeasurements[id2]) {
-        const correlation = calculateCorrelation(
-          configurationMeasurements[id1],
-          configurationMeasurements[id2]
-        );
+        const correlation = calculateCorrelation(configurationMeasurements[id1], configurationMeasurements[id2]);
         matrix[i][j] = correlation;
       } else {
         matrix[i][j] = i === j ? 1 : 0;
@@ -683,7 +640,6 @@ const calculateCorrelationMatrix = (
     });
   });
 
-  // Identify significant correlations
   const significantCorrelations: CorrelationMatrix['significantCorrelations'] = [];
   
   for (let i = 0; i < configIds.length; i++) {
@@ -697,7 +653,7 @@ const calculateCorrelationMatrix = (
       else if (absCorrelation >= 0.5) strength = 'moderate';
       else strength = 'weak';
 
-      if (absCorrelation >= 0.3) { // Only include correlations >= 0.3
+      if (absCorrelation >= 0.3) {
         significantCorrelations.push({
           config1: configIds[i],
           config2: configIds[j],
@@ -708,20 +664,9 @@ const calculateCorrelationMatrix = (
     }
   }
 
-  return {
-    configurationIds: configIds,
-    matrix,
-    significantCorrelations
-  };
+  return { configurationIds: configIds, matrix, significantCorrelations };
 };
 
-// =============================================================================
-// INSIGHTS GENERATION
-// =============================================================================
-
-/**
- * Generate insights and recommendations
- */
 const generateInsights = (
   measurement: EnhancedMeasurementData,
   configurations: ScalingConfiguration[],
@@ -729,7 +674,6 @@ const generateInsights = (
   validationMetrics: Record<string, ValidationMetrics>,
   correlationMatrix: CorrelationMatrix
 ): DeweyMethodResult['insights'] => {
-  // Find best configuration (highest R² and similarity)
   let bestConfig = configurations[0].id;
   let bestScore = 0;
   
@@ -738,9 +682,7 @@ const generateInsights = (
     const coeff = coefficients[config.id];
     
     if (metrics && coeff) {
-      // Composite score: R² weighted by similarity percentage
       const score = metrics.rSquared * (coeff.similarity.percentage / 100);
-      
       if (score > bestScore) {
         bestScore = score;
         bestConfig = config.id;
@@ -748,7 +690,6 @@ const generateInsights = (
     }
   });
 
-  // Find worst configuration
   let worstConfig = configurations[0].id;
   let worstScore = 1;
   
@@ -758,7 +699,6 @@ const generateInsights = (
     
     if (metrics && coeff) {
       const score = metrics.rSquared * (coeff.similarity.percentage / 100);
-      
       if (score < worstScore) {
         worstScore = score;
         worstConfig = config.id;
@@ -766,19 +706,13 @@ const generateInsights = (
     }
   });
 
-  // Determine recommended approach based on measurement type
-  const expectedExponents = getScalingExponents(measurement.type);
-  let recommendedApproach = 'allometric_lbm'; // Default to LBM
-  
+  let recommendedApproach = 'allometric_lbm';
   if (measurement.type === 'area') {
-    // For areas, BSA^1.0 should be theoretically optimal
-    recommendedApproach = 'allometric_bsa';
+    recommendedApproach = 'ratiometric_bsa'; // Same as allometric BSA^1.0
   } else if (measurement.type === 'linear') {
-    // For linear measurements, LBM^0.33 is most universal
     recommendedApproach = 'allometric_lbm';
   }
 
-  // Clinical relevance assessment
   const lbmSimilarity = coefficients['allometric_lbm']?.similarity.percentage || 0;
   const ratiometricSimilarity = coefficients['ratiometric_bsa']?.similarity.percentage || 0;
   
@@ -789,78 +723,43 @@ const generateInsights = (
     clinicalRelevance = 'low';
   }
 
-  return {
-    bestConfiguration: bestConfig,
-    worstConfiguration: worstConfig,
-    recommendedApproach,
-    clinicalRelevance
-  };
+  return { bestConfiguration: bestConfig, worstConfiguration: worstConfig, recommendedApproach, clinicalRelevance };
 };
 
 // =============================================================================
-// MAIN DEWEY METHOD FACTORY FUNCTION
+// MAIN FACTORY FUNCTIONS
 // =============================================================================
 
-/**
- * Generate comprehensive scaling analysis using the Dewey methodology
- * 
- * This is the main function that orchestrates the entire analysis:
- * 1. Sets up canonical reference populations
- * 2. Calculates coefficients for each scaling configuration
- * 3. Generates population data across physiological ranges
- * 4. Creates chart-ready data for visualization
- * 5. Calculates validation metrics and correlations
- * 6. Provides insights and recommendations
- */
 export const generateScalingAnalysis = (
   measurement: EnhancedMeasurementData,
   formulaSelection: FormulaSelectionState,
   configurations?: ScalingConfiguration[],
   options: AnalysisOptions = {}
 ): DeweyMethodResult => {
-  // Use standard configurations if none provided
   const scalingConfigurations = configurations || getStandardConfigurations(measurement.type);
-  
-  // Generate canonical reference populations
   const referencePopulations = generateCanonicalReferences(formulaSelection);
   
-  // Calculate coefficients for each configuration
   const coefficients: Record<string, ScalingCoefficients> = {};
   scalingConfigurations.forEach(config => {
     coefficients[config.id] = calculateCoefficients(measurement, config, referencePopulations);
   });
   
-  // Generate population data for each configuration
   const populationData: Record<string, { male: PopulationPoint[]; female: PopulationPoint[] }> = {};
   scalingConfigurations.forEach(config => {
-    populationData[config.id] = generatePopulationData(
-      config,
-      coefficients[config.id],
-      formulaSelection,
-      options
-    );
+    populationData[config.id] = generatePopulationData(config, coefficients[config.id], formulaSelection, options);
   });
   
-  // Generate chart data (with coefficients for ratiometric calculations)
   const chartData = generateChartData(scalingConfigurations, populationData, coefficients);
   
-  // Calculate validation metrics
   const validationMetrics: Record<string, ValidationMetrics> = {};
   scalingConfigurations.forEach(config => {
-    validationMetrics[config.id] = calculateValidationMetrics(
-      config,
-      coefficients[config.id],
-      populationData[config.id],
-      measurement
-    );
+    validationMetrics[config.id] = calculateValidationMetrics(config, coefficients[config.id], populationData[config.id], measurement);
   });
   
-  // Calculate correlation matrix (if requested)
   const correlationMatrix = options.includeCorrelations !== false 
     ? calculateCorrelationMatrix(scalingConfigurations, populationData)
     : { configurationIds: [], matrix: [], significantCorrelations: [] };
   
-  // Generate insights (if requested)
   const insights = options.generateInsights !== false
     ? generateInsights(measurement, scalingConfigurations, coefficients, validationMetrics, correlationMatrix)
     : {
@@ -884,13 +783,6 @@ export const generateScalingAnalysis = (
   };
 };
 
-// =============================================================================
-// CONVENIENCE FUNCTIONS
-// =============================================================================
-
-/**
- * Generate quick two-way comparison (Ratiometric BSA vs Allometric LBM)
- */
 export const generateQuickComparison = (
   measurement: EnhancedMeasurementData,
   formulaSelection: FormulaSelectionState,
@@ -905,7 +797,8 @@ export const generateQuickComparison = (
       approach: 'ratiometric',
       variable: 'bsa',
       exponent: 1.0,
-      description: 'Current clinical standard'
+      description: 'Current clinical standard',
+      sourceData: 'bsa'
     },
     {
       id: 'allometric_lbm',
@@ -913,7 +806,8 @@ export const generateQuickComparison = (
       approach: 'allometric',
       variable: 'lbm',
       exponent: expectedExponent,
-      description: 'Universal biological scaling'
+      description: 'Universal biological scaling',
+      sourceData: 'bsa'
     }
   ];
 

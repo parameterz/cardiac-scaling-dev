@@ -17,7 +17,61 @@ const Introduction: React.FC = () => {
           outlined in the "theory of similarity" and implemented through the Dewey methodology.
         </p>
 
-        {/* Section 1: Theory of Similarity */}
+{/* Section 1: Mathematical Foundation */}
+        <section className="transparency-panel">
+          <header>
+            <h3>📊 Ratiometric vs. Allometric Scaling: Mathematical Foundation</h3>
+          </header>
+          
+          <h4>Ratiometric Scaling = Linear Equation Through Origin</h4>
+          <p>
+            Current clinical practice uses <strong>ratiometric scaling</strong> - simple division by body surface area. 
+            This creates a linear relationship that passes through the origin (zero-intercept).
+          </p>
+          
+          <div className="insight-info">
+            <h5>📝 Example: LV Mass Indexing</h5>
+            <p>If the upper limit of normal (ULN) for LV mass indexed to BSA is <strong>95 g/m²</strong>:</p>
+            <div className="coefficient-display" style={{ textAlign: 'center', padding: '1rem', margin: '1rem 0' }}>
+              LV Mass = 95 × BSA
+            </div>
+            <p>For someone with BSA = 2.0 m²: LV Mass = 95 × 2.0 = <strong>190 g</strong></p>
+            <p>This is the equation of a line: <strong>y = mx</strong> where:</p>
+            <ul style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              <li>y = LV Mass (dependent variable)</li>
+              <li>m = 95 (slope = indexed coefficient)</li>
+              <li>x = BSA (independent variable)</li>
+              <li>y-intercept = 0 (line passes through origin)</li>
+            </ul>
+          </div>
+
+          <h4>Allometric Scaling = Power Law Relationship</h4>
+          <p>
+            <strong>Allometric scaling</strong> uses power law relationships that account for geometric 
+            scaling principles from biology and physics.
+          </p>
+          
+          <div className="coefficient-display" style={{ textAlign: 'center', padding: '1rem', margin: '1rem 0' }}>
+            y = a × x<sup>b</sup>
+          </div>
+          <p>Where:</p>
+          <ul style={{ fontSize: '0.9rem' }}>
+            <li><strong>a</strong> = scaling coefficient (derived from reference data)</li>
+            <li><strong>x</strong> = scaling variable (LBM, BSA, or Height)</li>
+            <li><strong>b</strong> = scaling exponent (based on dimensionality: 0.33, 0.67, 1.0, 1.5, etc.)</li>
+          </ul>
+
+          <div className="insight-warning">
+            <h5>🤔 The Critical Question</h5>
+            <p>
+              Ratiometric scaling assumes <strong>all cardiac measurements</strong> scale linearly with BSA 
+              (exponent = 1.0). But should a 1-dimensional measurement like wall thickness really scale 
+              the same way as a 3-dimensional measurement like ventricular mass?
+            </p>
+          </div>
+        </section>
+
+        {/* Section 2: Theory of Similarity */}
         <section className="insight-info">
           <header>
             <h3>📐 Theory of Similarity: Geometric Foundation</h3>
@@ -73,7 +127,7 @@ const Introduction: React.FC = () => {
                 <tr>
                   <td><strong>Mass/Volume (3D)</strong></td>
                   <td>LBM<sup>1.0</sup> = LBM</td>
-                  <td>BSA<sup>1.5</sup> = BSA × √BSA</td>
+                  <td>BSA<sup>1.5</sup> </td>
                   <td>Height<sup>1.6-2.7</sup></td>
                   <td>LV mass, chamber volumes, stroke volume</td>
                 </tr>
@@ -86,8 +140,8 @@ const Introduction: React.FC = () => {
             <p>
               Traditional BSA indexing treats <strong>all</strong> measurements as BSA<sup>1.0</sup> 
               (simple division). This only makes geometric sense for <strong>area measurements</strong>. 
-              For linear measurements, we should use BSA<sup>0.5</sup> = √BSA, and for mass/volume 
-              measurements, we should use BSA<sup>1.5</sup> = BSA × √BSA.
+              For linear measurements, we should use √BSA, and for mass/volume 
+              measurements, we should use BSA<sup>1.5</sup>.
             </p>
           </div>
 
@@ -97,8 +151,8 @@ const Introduction: React.FC = () => {
             <dd>Square root of body surface area</dd>
             <dt>LBM<sup>0.33</sup> ≈ ∛LBM</dt>
             <dd>Cube root of lean body mass</dd>
-            <dt>BSA<sup>1.5</sup> = BSA × √BSA</dt>
-            <dd>BSA times square root of BSA</dd>
+            <dt>BSA<sup>1.5</sup></dt>
+            <dd>BSA to the 1.5 power</dd>
             <dt>Height<sup>2.0</sup> = Height²</dt>
             <dd>Height squared</dd>
           </dl>
