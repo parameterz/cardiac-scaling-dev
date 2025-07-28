@@ -162,7 +162,7 @@ const Methods: React.FC = () => {
 
       {/* Dewey Methodology */}
       <section>
-        <h3>Implementation of the Dewey Methodology</h3>
+        <h3>Implementation of the "Dewey Methodology"</h3>
 
         <p>
           Inspired by their 2008 paper{" "}
@@ -198,113 +198,13 @@ const Methods: React.FC = () => {
             <sup>x</sup>, Height<sup>x</sup>, BSA<sup>x</sup>)
           </li>
           <li>
-            <strong>Population Testing:</strong> Apply derived coefficients
+            <strong>Population Comparison:</strong> Apply derived coefficients
             across physiological ranges
-          </li>
-          <li>
-            Compare derived relationships with published data and theoretical
-            predictions
           </li>
         </ol>
 
-        <aside
-          style={{
-            borderLeft: "3px solid var(--pico-primary)",
-            paddingLeft: "1rem",
-            margin: "1.5rem 0",
-            fontSize: "0.95rem",
-          }}
-        >
-          <h4>Universal Biology Hypothesis</h4>
-          <p>
-            LBM-based scaling should produce nearly identical coefficients for
-            males and females, reflecting universal biological relationships
-            that transcend sex-specific body composition differences.
-          </p>
-        </aside>
       </section>
 
-      {/* Height Exponent Analysis */}
-      <section>
-        <h3>Height Exponent Variability in Mass and Volume Measurements</h3>
-
-        <p>
-          For mass and volume measurements, geometric theory predicts Height
-          <sup>3.0</sup> scaling, but empirical studies consistently report
-          lower exponents. This analysis examines multiple height exponents
-          documented in the cardiovascular literature.
-        </p>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "1.5rem",
-            margin: "2rem 0",
-          }}
-        >
-          <div
-            style={{
-              padding: "1rem",
-              border: "1px solid var(--pico-border-color)",
-              borderRadius: "var(--pico-border-radius)",
-            }}
-          >
-            <h5>
-              Height<sup>3.0</sup> - Theoretical
-            </h5>
-            <p>
-              Pure geometric scaling for three-dimensional measurements based on
-              similarity theory.
-            </p>
-          </div>
-          <div
-            style={{
-              padding: "1rem",
-              border: "1px solid var(--pico-border-color)",
-              borderRadius: "var(--pico-border-radius)",
-            }}
-          >
-            <h5>
-              Height<sup>2.7</sup> - Empirical
-            </h5>
-            <p>
-              Commonly reported in cardiac mass studies, representing deviation
-              from pure geometric scaling.
-            </p>
-          </div>
-          <div
-            style={{
-              padding: "1rem",
-              border: "1px solid var(--pico-border-color)",
-              borderRadius: "var(--pico-border-radius)",
-            }}
-          >
-            <h5>
-              Height<sup>1.6</sup> - Empirical
-            </h5>
-            <p>
-              Alternative empirical exponent found in cardiovascular scaling
-              literature.
-            </p>
-          </div>
-        </div>
-
-        <h4>Potential Explanations for Empirical Deviations</h4>
-        <ul>
-          <li>
-            Cardiovascular structures do not scale with perfect geometric
-            similarity
-          </li>
-          <li>Functional demands deviate from pure cube-law relationships</li>
-          <li>
-            Body composition effects (lean mass versus adipose tissue
-            distribution)
-          </li>
-          <li>Physical conditioning and fitness adaptations</li>
-          <li>Age-related changes and pathological influences</li>
-        </ul>
-      </section>
 
       {/* Data Sources */}
       <section>
@@ -380,7 +280,6 @@ const Methods: React.FC = () => {
           </summary>
 
           <div style={{ marginTop: "1.5rem" }}>
-            <h4>Primary Data Source</h4>
             <h4>Theoretical Framework</h4>
             <p style={{ marginBottom: "1rem" }}>
               Dewey FE, Rosenthal D, Murphy DJ Jr, Froelicher VF, Ashley EA.

@@ -469,7 +469,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
                 {/* Summary statistics */}
                 <div style={{ fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>
-                  <div>Sex Similarity: <strong>{coefficients.similarity.percentage.toFixed(1)}%</strong></div>
                   <div>{display.description}</div>
                 </div>
               </div>
