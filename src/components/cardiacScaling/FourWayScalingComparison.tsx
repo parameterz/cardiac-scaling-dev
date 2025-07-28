@@ -416,7 +416,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </ResponsiveContainer>
       </section>
 
-      {/* Scaling Approach Controls - The excellent toggle system! */}
+      {/* Scaling Approach Controls  */}
       <section style={{ marginBottom: '1.5rem' }}>
         <h4 style={{ margin: '0 0 1rem 0' }}>Scaling Approach Controls</h4>
         <div className="metrics-grid">
@@ -503,87 +503,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </details>
       </section>
 
-      {/* Detailed Analytics - Optional deep dive */}
-      <section style={{ marginTop: '1.5rem' }}>
-        <details open={showDetailedMetrics} onToggle={(e) => setShowDetailedMetrics(e.currentTarget.open)}>
-          <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
-            Detailed Metrics and Cross-Method Correlations
-          </summary>
-          
-          {showDetailedMetrics && (
-            <div style={{ marginTop: '1rem' }}>
-              {/* Configuration details */}
-              <div className="metrics-grid">
-                {factoryResult.configurations.map(config => {
-                  const coefficients = factoryResult.coefficients[config.id];
-                  const metrics = factoryResult.validationMetrics[config.id];
-                  const display = CONFIGURATION_COLORS[config.id];
-
-                  return (
-                    <article key={config.id} className="metric-card">
-                      <header>
-                        <h5>{display?.name || config.name}</h5>
-                      </header>
-                      
-                      <dl style={{ fontSize: '0.875rem' }}>
-                        <dt>Approach:</dt>
-                        <dd>
-                          <span style={{ 
-                            backgroundColor: config.approach === 'ratiometric' ? 'var(--cardiac-success)' : 'var(--cardiac-primary)',
-                            color: 'white',
-                            padding: '0.125rem 0.25rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.75rem'
-                          }}>
-                            {config.approach}
-                          </span>
-                        </dd>
-                        <dt>Variable:</dt>
-                        <dd>{config.variable.toUpperCase()}^{config.exponent}</dd>
-                        <dt>R²:</dt>
-                        <dd className="status-excellent">{metrics.rSquared.toFixed(3)}</dd>
-                        <dt>Sex Similarity:</dt>
-                        <dd className="status-excellent">{coefficients.similarity.percentage.toFixed(1)}%</dd>
-                      </dl>
-                    </article>
-                  );
-                })}
-              </div>
-
-              {/* Cross-method correlations */}
-              {factoryResult.correlationMatrix.significantCorrelations.length > 0 && (
-                <div style={{ marginTop: '1.5rem' }}>
-                  <h5>Cross-Method Correlations</h5>
-                  <div className="metrics-grid">
-                    {factoryResult.correlationMatrix.significantCorrelations.slice(0, 6).map((corr, index) => {
-                      const config1 = CONFIGURATION_COLORS[corr.config1];
-                      const config2 = CONFIGURATION_COLORS[corr.config2];
-                      
-                      return (
-                        <div key={index} className="metric-card">
-                          <h6 style={{ fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>
-                            {config1?.name || corr.config1} ↔ {config2?.name || corr.config2}
-                          </h6>
-                          <div 
-                            className="coefficient-display"
-                            style={{ 
-                              color: Math.abs(corr.correlation) > 0.7 ? 'var(--cardiac-success)' : 'var(--cardiac-warning)',
-                              fontSize: '1.1rem'
-                            }}
-                          >
-                            {corr.correlation.toFixed(3)}
-                          </div>
-                          <small>{corr.strength}</small>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </details>
-      </section>
     </div>
   );
 };
