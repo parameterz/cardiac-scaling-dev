@@ -24,9 +24,6 @@ function App() {
       <header className="container">
         <hgroup>
           <h1>Cardiac Scaling Analysis Laboratory</h1>
-          <p>
-            Interactive exploration of geometric scaling principles in cardiac measurements
-          </p>
         </hgroup>
 
         <Navigation 
