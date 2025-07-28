@@ -2,13 +2,14 @@
 import React, { useState } from "react";
 
 // Import components
+import Navigation, { type NavigationTab } from "./components/Navigation";
 import Intro from "./components/Intro";
 import Methods from "./components/Methods";
 import FourWayScalingComparison from "./components/cardiacScaling/FourWayScalingComparison";
 import { getMeasurementsByType } from "./data/stromData";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"intro" | "linear" | "area" | "mass_volume" | "methods">("intro");
+  const [activeTab, setActiveTab] = useState<NavigationTab>("intro");
 
   // Get measurements for each category
   const linearMeasurements = getMeasurementsByType('linear');
@@ -17,55 +18,26 @@ function App() {
   const volumeMeasurements = getMeasurementsByType('volume');
   const massVolumeMeasurements = [...massMeasurements, ...volumeMeasurements];
 
-  // Handle navigation from Welcome buttons
-  const navigateToTab = (tab: typeof activeTab) => {
-    setActiveTab(tab);
-  };
-
   return (
     <div>
-      {/* Header with navigation */}
+      {/* Professional Header with Navigation */}
       <header className="container">
         <hgroup>
-          <h1>🫀 Cardiac Scaling Analysis Laboratory</h1>
+          <h1>Cardiac Scaling Analysis Laboratory</h1>
           <p>
             Interactive exploration of geometric scaling principles in cardiac measurements
           </p>
         </hgroup>
 
-        {/* Tab Navigation using Pico CSS */}
-        <nav className="tab-navigation">
-          <button
-            className={`tab-button ${activeTab === "intro" ? "active" : ""}`}
-            onClick={() => setActiveTab("intro")}
-          >
-            🚀 Intro
-          </button>
-          <button
-            className={`tab-button ${activeTab === "linear" ? "active" : ""}`}
-            onClick={() => setActiveTab("linear")}
-          >
-            📐 Linear ({linearMeasurements.length})
-          </button>
-          <button
-            className={`tab-button ${activeTab === "area" ? "active" : ""}`}
-            onClick={() => setActiveTab("area")}
-          >
-            📊 Area ({areaMeasurements.length})
-          </button>
-          <button
-            className={`tab-button ${activeTab === "mass_volume" ? "active" : ""}`}
-            onClick={() => setActiveTab("mass_volume")}
-          >
-            📦 Mass & Volume ({massVolumeMeasurements.length})
-          </button>
-          <button
-            className={`tab-button ${activeTab === "methods" ? "active" : ""}`}
-            onClick={() => setActiveTab("methods")}
-          >
-            🔬 Methodology
-          </button>
-        </nav>
+        <Navigation 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          measurementCounts={{
+            linear: linearMeasurements.length,
+            area: areaMeasurements.length,
+            massVolume: massVolumeMeasurements.length
+          }}
+        />
       </header>
 
       {/* Main Content */}
@@ -78,13 +50,13 @@ function App() {
           <section>
             <header>
               <hgroup>
-                <h2>📐 Linear Measurements (1D)</h2>
+                <h2>Linear Measurements</h2>
                 <p>
-                  Dimensions, diameters, and thicknesses that scale with these expected relationships: LBM^0.33, BSA^0.5, Height^1.0
+                  One-dimensional cardiac parameters including dimensions, diameters, 
+                  and wall thicknesses. Expected scaling relationships: LBM^0.33, BSA^0.5, Height^1.0
                 </p>
               </hgroup>
             </header>
-            
 
             <FourWayScalingComparison 
               availableMeasurements={linearMeasurements}
@@ -95,7 +67,6 @@ function App() {
                 scalingInfo: "Expected: LBM^0.33, BSA^0.5, Height^1.0"
               }}
             />
-            
           </section>
         )}
         
@@ -103,13 +74,13 @@ function App() {
           <section>
             <header>
               <hgroup>
-                <h2>📊 Area Measurements (2D)</h2>
+                <h2>Area Measurements</h2>
                 <p>
-                  Chamber areas and valve areas that scale with these expected relationships: LBM^0.67, BSA^1.0, Height^2.0
+                  Two-dimensional cardiac parameters including chamber areas and valve areas. 
+                  Expected scaling relationships: LBM^0.67, BSA^1.0, Height^2.0
                 </p>
               </hgroup>
             </header>
-            
 
             <FourWayScalingComparison 
               availableMeasurements={areaMeasurements}
@@ -120,7 +91,6 @@ function App() {
                 scalingInfo: "Expected: LBM^0.67, BSA^1.0 (=Ratiometric), Height^2.0"
               }}
             />
-            
           </section>
         )}
         
@@ -128,24 +98,23 @@ function App() {
           <section>
             <header>
               <hgroup>
-                <h2>📦 Mass & Volume Measurements (3D)</h2>
+                <h2>Mass and Volume Measurements</h2>
                 <p>
-                  Tissue masses and chamber volumes that scale with these expected relationships: LBM^1.0, BSA^1.5, Height^1.6-3.0
+                  Three-dimensional cardiac parameters including tissue masses and chamber volumes. 
+                  Expected scaling relationships: LBM^1.0, BSA^1.5, Height^1.6-3.0
                 </p>
               </hgroup>
             </header>
-            
 
             <FourWayScalingComparison 
               availableMeasurements={massVolumeMeasurements}
               initialMeasurement="lvm"
               categoryContext={{
-                categoryName: "Mass & Volume Measurements",
+                categoryName: "Mass and Volume Measurements",
                 expectedApproaches: 6,
                 scalingInfo: "Expected: LBM^1.0, BSA^1.5, Height^1.6-3.0"
               }}
             />
-            
           </section>
         )}
 
@@ -153,10 +122,10 @@ function App() {
           <section>
             <header>
               <hgroup>
-                <h2>🔬 Methodology & Theory</h2>
+                <h2>Methodology and Theoretical Framework</h2>
                 <p>
-                  Deep dive into the mathematical foundations, Dewey methodology, 
-                  and geometric scaling principles underlying this analysis.
+                  Mathematical foundations, scaling theory principles, and implementation 
+                  of the Dewey methodology for cardiovascular parameter normalization.
                 </p>
               </hgroup>
             </header>
@@ -166,19 +135,27 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
+      {/* Professional Footer */}
       <footer className="container">
         <hr />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap',
+          fontSize: '0.9rem'
+        }}>
           <small>
-            Cardiac Scaling Analysis Laboratory • Educational exploration of geometric scaling principles
+            Cardiac Scaling Analysis Laboratory
+          </small>
+          <small style={{ color: 'var(--pico-muted-color)' }}>
+            Educational research tool • Not for clinical use
           </small>
         </div>
         
-        {/* Version info */}
-        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <small style={{ color: 'var(--pico-muted-color)' }}>
-            Educational Tool v0.1.2 • Not for clinical use • 
+        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+          <small style={{ color: 'var(--pico-muted-color)', fontSize: '0.85rem' }}>
+            v0.1.3 • © 2025 Dan Dyar, MA, ACS, RDCS, FASE •
           </small>
         </div>
       </footer>
