@@ -117,11 +117,20 @@ const lbmCalculators = {
   },
   
   hume: (weight: number, height: number, sex: Sex) => {
-    // Hume & Weyers (1971) formula
+    // Hume (1966) formula
     if (sex === 'male') {
       return 0.3281 * weight + 0.33929 * height - 29.5336;
     } else {
       return 0.29569 * weight + 0.41813 * height - 43.2933;
+    }
+  },
+
+    hume_weyers: (weight: number, height: number, sex: Sex) => {
+    // Hume & Weyers (1971) formula - derived from TBW prediction
+    if (sex === 'male') {
+      return 0.2668 * height + 0.4066 * weight - 19.19;
+    } else {
+      return 0.4720 * height + 0.2518 * weight - 48.32;
     }
   },
   
@@ -177,7 +186,8 @@ const lbmCalculators = {
 // LBM formula metadata
 export const LBM_FORMULA_NAMES = {
   boer: 'Boer (1984)',
-  hume: 'Hume & Weyers (1971)',
+  hume: 'Hume (1966)',
+  hume_weyers: 'Hume & Weyers (1971)',
   yu: 'Yu et al. (2013)',
   lee: 'Lee et al. (2017)',
   kuch: 'Kuch (2001)',
@@ -256,7 +266,8 @@ export const BSA_FORMULA_INFO: FormulaInfo[] = [
 
 export const LBM_FORMULA_INFO: FormulaInfo[] = [
   { id: 'boer', name: 'Boer', year: 1984, parameters: ['weight', 'height', 'sex'], notes: 'Most commonly used' },
-  { id: 'hume', name: 'Hume & Weyers', year: 1971, parameters: ['weight', 'height', 'sex'], notes: 'Classic formula' },
+  { id: 'hume', name: 'Hume', year: 1966, parameters: ['weight', 'height', 'sex'], notes: 'Classic formula' },
+  { id: 'hume_weyers', name: 'Hume & Weyers', year: 1971, parameters: ['weight', 'height, sex'], notes: 'Derived from TBW prediction (73% hydration)' },
   { id: 'janmahasatian', name: 'Janmahasatian et al.', year: 2005, parameters: ['weight', 'height', 'sex'], notes: 'BMI-adjusted FFM' },
   { id: 'kuch', name: 'Kuch', year: 2001, parameters: ['weight', 'height', 'sex'], notes: 'Calculates FFM, not LBM' },
   { id: 'lee', name: 'Lee et al.', year: 2017, parameters: ['weight', 'height', 'sex', 'age', 'ethnicity'], notes: 'Most comprehensive' },

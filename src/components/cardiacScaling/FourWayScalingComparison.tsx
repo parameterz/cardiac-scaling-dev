@@ -54,7 +54,7 @@ interface ConfigurationDisplay {
 }
 
 // =============================================================================
-// UPDATED: CONSISTENT ALLOMETRIC COLOR PALETTE
+// CONSISTENT ALLOMETRIC COLOR PALETTE
 // =============================================================================
 
 const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
@@ -64,8 +64,8 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
     name: 'Ratiometric BSA',
     description: 'Current clinical standard',
     color: { male: '#60a5fa', female: '#f87171' },
-    strokeWidth: 3,
-    strokeDasharray: '8 4'
+    strokeWidth: 2,
+    strokeDasharray: '6 3'
   },
   
   // Allometric approaches
@@ -74,42 +74,40 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
     name: 'Allometric LBM',
     description: 'Universal biological scaling',
     color: { male: '#3b82f6', female: '#dc2626' },
-    strokeWidth: 4
+    strokeWidth: 3
   },
   allometric_bsa: {
     id: 'allometric_bsa',
     name: 'Allometric BSA',
     description: 'Geometric BSA scaling', 
-    color: { male: '#059669', female: '#10b981' },
+    color: { male: '#398712', female: '#55c21e' },
     strokeWidth: 3
   },
   allometric_height: {
     id: 'allometric_height',
     name: 'Allometric Height',
     description: 'Standard height scaling', 
-    color: { male: '#7c3aed', female: '#ec4899' },
+    color: { male: '#7540bf', female: '#bd9fdf' },
     strokeWidth: 3
   },
   allometric_height_16: {
     id: 'allometric_height_16', 
     name: 'Height^1.6 (Empirical)',
     description: 'Empirical literature findings',
-    color: { male: '#8b5cf6', female: '#a855f7' },
-    strokeWidth: 2,
-    strokeDasharray: '6 3'
+    color: { male: '#9236a4', female: '#cd68e0' },
+    strokeWidth: 3,
   },
   allometric_height_27: {
     id: 'allometric_height_27',
     name: 'Height^2.7 (Empirical)', 
     description: 'Empirical literature findings',
-    color: { male: '#06b6d4', female: '#0891b2' },
-    strokeWidth: 2,
-    strokeDasharray: '4 2'
+    color: { male: '#b21e4f', female: '#f8889e' },
+    strokeWidth: 3,
   }
 };
 
 // =============================================================================
-// MAIN COMPONENT - VISUAL FIRST DESIGN
+// MAIN COMPONENT - PROFESSIONAL STYLING
 // =============================================================================
 
 const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
@@ -141,7 +139,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
   const factoryResult = useMemo(() => {
     if (!measurement) return null;
 
-    console.log(`🔧 ${categoryContext?.categoryName || 'Analysis'}: Generating scaling analysis for ${measurement.name}...`);
+    console.log(`Analysis: Generating scaling analysis for ${measurement.name}...`);
 
     // Get all standard configurations for this measurement type
     const configurations = getStandardConfigurations(measurement.type);
@@ -155,7 +153,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
       generateInsights: true
     });
 
-    console.log(`✅ ${categoryContext?.categoryName || 'Analysis'}: ${configurations.length} configurations analyzed`);
+    console.log(`Analysis Complete: ${configurations.length} configurations analyzed`);
     return result;
   }, [measurement, formulaSelection, categoryContext]);
 
@@ -269,12 +267,12 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
   return (
     <div>
-      {/* MINIMAL HEADER - Just the essentials */}
+      {/* Professional Header - Clean and functional */}
       <header style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ flex: 1, minWidth: '300px' }}>
             <label htmlFor="measurement-select" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>
-              {categoryContext ? `${categoryContext.categoryName}` : 'Measurement'}
+              {categoryContext ? `${categoryContext.categoryName}` : 'Measurement Selection'}
             </label>
             <select
               id="measurement-select"
@@ -292,24 +290,24 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button onClick={showKeyComparison} className="button-small">
-              🎯 Key Comparison
+              Key Comparison
             </button>
             <button onClick={showAllApproaches} className="button-small secondary">
-              👁️ Show All
+              Show All
             </button>
             <button onClick={hideAllApproaches} className="button-small secondary">
-              🫥 Hide All
+              Hide All
             </button>
           </div>
         </div>
       </header>
 
-      {/* HERO CHART - Front and center! */}
+      {/* Primary Visualization - Chart first! */}
       <section className="chart-container" style={{ marginBottom: '1.5rem' }}>
         <header style={{ marginBottom: '1rem' }}>
           <h3 style={{ margin: '0 0 0.5rem 0' }}>{measurement.name} - Scaling Approaches Comparison</h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--pico-muted-color)', margin: 0 }}>
-            {categoryContext ? categoryContext.scalingInfo : 'Compare different scaling methodologies'} • 
+            {categoryContext ? categoryContext.scalingInfo : 'Comparative analysis of scaling methodologies'} • 
             Toggle approaches below chart
           </p>
         </header>
@@ -418,9 +416,9 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </ResponsiveContainer>
       </section>
 
-      {/* QUICK TOGGLES - Right after the chart for immediate interaction */}
+      {/* Scaling Approach Controls - The excellent toggle system! */}
       <section style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ margin: '0 0 1rem 0' }}>Toggle Scaling Approaches</h4>
+        <h4 style={{ margin: '0 0 1rem 0' }}>Scaling Approach Controls</h4>
         <div className="metrics-grid">
           {factoryResult.configurations.map(config => {
             const display = CONFIGURATION_COLORS[config.id] || {
@@ -438,7 +436,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
               <div key={config.id} className="metric-card" style={{ padding: '1rem' }}>
                 <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>{display.name}</h5>
                 
-                {/* Toggle Controls - Prominent */}
+                {/* Toggle Controls - Your excellent design preserved! */}
                 <div className="button-group" style={{ marginBottom: '0.75rem' }}>
                   <button
                     onClick={() => toggleAllForConfig(config.id)}
@@ -469,7 +467,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                   </button>
                 </div>
 
-                {/* Quick stats */}
+                {/* Summary statistics */}
                 <div style={{ fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>
                   <div>Sex Similarity: <strong>{coefficients.similarity.percentage.toFixed(1)}%</strong></div>
                   <div>{display.description}</div>
@@ -480,12 +478,11 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </div>
       </section>
 
-
-      {/* PROGRESSIVE DISCLOSURE - Advanced controls */}
+      {/* Advanced Controls - Progressive disclosure */}
       <section>
         <details open={showAdvancedControls} onToggle={(e) => setShowAdvancedControls(e.currentTarget.open)}>
           <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
-            🔧 Advanced Controls & Formula Selection
+            Advanced Controls and Formula Selection
           </summary>
           
           <div style={{ marginTop: '1rem' }}>
@@ -506,11 +503,11 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </details>
       </section>
 
-      {/* DETAILED METRICS - Optional deep dive */}
+      {/* Detailed Analytics - Optional deep dive */}
       <section style={{ marginTop: '1.5rem' }}>
         <details open={showDetailedMetrics} onToggle={(e) => setShowDetailedMetrics(e.currentTarget.open)}>
           <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
-            📊 Detailed Metrics & Correlations
+            Detailed Metrics and Cross-Method Correlations
           </summary>
           
           {showDetailedMetrics && (
@@ -553,7 +550,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                 })}
               </div>
 
-              {/* Correlations if available */}
+              {/* Cross-method correlations */}
               {factoryResult.correlationMatrix.significantCorrelations.length > 0 && (
                 <div style={{ marginTop: '1.5rem' }}>
                   <h5>Cross-Method Correlations</h5>
@@ -587,7 +584,6 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           )}
         </details>
       </section>
-
     </div>
   );
 };
