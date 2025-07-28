@@ -2,13 +2,13 @@
 import React, { useState } from "react";
 
 // Import components
-import Welcome from "./components/Welcome";
-import Introduction from "./components/Introduction"; // Now becomes "Methodology"
+import Intro from "./components/Intro";
+import Methods from "./components/Methods";
 import FourWayScalingComparison from "./components/cardiacScaling/FourWayScalingComparison";
 import { getMeasurementsByType } from "./data/stromData";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"welcome" | "linear" | "area" | "mass_volume" | "methodology">("welcome");
+  const [activeTab, setActiveTab] = useState<"intro" | "linear" | "area" | "mass_volume" | "methods">("intro");
 
   // Get measurements for each category
   const linearMeasurements = getMeasurementsByType('linear');
@@ -36,10 +36,10 @@ function App() {
         {/* Tab Navigation using Pico CSS */}
         <nav className="tab-navigation">
           <button
-            className={`tab-button ${activeTab === "welcome" ? "active" : ""}`}
-            onClick={() => setActiveTab("welcome")}
+            className={`tab-button ${activeTab === "intro" ? "active" : ""}`}
+            onClick={() => setActiveTab("intro")}
           >
-            🚀 Getting Started
+            🚀 Intro
           </button>
           <button
             className={`tab-button ${activeTab === "linear" ? "active" : ""}`}
@@ -60,8 +60,8 @@ function App() {
             📦 Mass & Volume ({massVolumeMeasurements.length})
           </button>
           <button
-            className={`tab-button ${activeTab === "methodology" ? "active" : ""}`}
-            onClick={() => setActiveTab("methodology")}
+            className={`tab-button ${activeTab === "methods" ? "active" : ""}`}
+            onClick={() => setActiveTab("methods")}
           >
             🔬 Methodology
           </button>
@@ -70,8 +70,8 @@ function App() {
 
       {/* Main Content */}
       <main className="container">
-        {activeTab === "welcome" && (
-          <Welcome onNavigate={setActiveTab} />
+        {activeTab === "intro" && (
+          <Intro onNavigate={setActiveTab} />
         )}
         
         {activeTab === "linear" && (
@@ -149,7 +149,7 @@ function App() {
           </section>
         )}
 
-        {activeTab === "methodology" && (
+        {activeTab === "methods" && (
           <section>
             <header>
               <hgroup>
@@ -161,7 +161,7 @@ function App() {
               </hgroup>
             </header>
             
-            <Introduction />
+            <Methods />
           </section>
         )}
       </main>
