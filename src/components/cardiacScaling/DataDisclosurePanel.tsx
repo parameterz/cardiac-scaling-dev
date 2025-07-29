@@ -34,7 +34,7 @@ const formatters = {
   bmi: (val: number): string => val.toFixed(2),
   bsa: (val: number): string => val.toFixed(3),
   lbm: (val: number): string => val.toFixed(2),
-  coefficient: (val: number): string => val.toFixed(4),
+  coefficient: (val: number): string => val.toFixed(3),
   similarity: (val: number): string => val.toFixed(1),
   exponent: (val: number): string => val.toFixed(2),
   
