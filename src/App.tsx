@@ -6,6 +6,7 @@ import Navigation, { type NavigationTab } from "./components/Navigation";
 import Intro from "./components/Intro";
 import Methods from "./components/Methods";
 import FourWayScalingComparison from "./components/cardiacScaling/FourWayScalingComparison";
+import LVMassComponentAnalysis from "./components/cardiacScaling/LVMassComponentAnalysis"; // NEW IMPORT
 import { getMeasurementsByType } from "./data/stromData";
 
 function App() {
@@ -115,7 +116,12 @@ function App() {
           </section>
         )}
 
-        {activeTab === "methods" && (
+        {activeTab === "lv_mass_analysis" && (
+          <section>
+            <LVMassComponentAnalysis />
+          </section>
+        )}
+                {activeTab === "methods" && (
           <section>
             <header>
               <hgroup>

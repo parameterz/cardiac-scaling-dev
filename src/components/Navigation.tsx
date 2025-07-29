@@ -3,7 +3,7 @@
 import React from 'react';
 
 // Types
-export type NavigationTab = "intro" | "linear" | "area" | "mass_volume" | "methods";
+export type NavigationTab = "intro" | "linear" | "area" | "mass_volume" | "lv_mass_analysis" | "methods";
 
 interface MeasurementCounts {
   linear: number;
@@ -50,6 +50,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Mass & Volume',
     showCount: true,
     countKey: 'massVolume'
+  },
+  {
+    id: 'lv_mass_analysis',  
+    label: 'LV Mass Analysis',
+    showCount: false
   },
   {
     id: 'methods',
