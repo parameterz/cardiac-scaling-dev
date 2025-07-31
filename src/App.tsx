@@ -163,7 +163,7 @@ function App() {
           <small
             style={{ color: "var(--pico-muted-color)", fontSize: "0.85rem" }}
           >
-            v0.1.3 • © 2025 Dan Dyar, MA, ACS, RDCS, FASE •
+            v0.1.4 30.07.2025 • © 2025 Dan Dyar, MA, ACS, RDCS, FASE •
           </small>
         </div>
       </footer>
