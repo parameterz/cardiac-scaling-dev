@@ -217,7 +217,7 @@ const Methods: React.FC = () => {
               Study of Atherosclerosis.
               <em>J Am Heart Assoc.</em> 2024;13:e034029.
               <a
-                href="https://doi.org/10.1161/JAHA.124.034029"
+                href="https://doi.org/10.1161/JAHA.123.034029"
                 target="_blank"
                 rel="noopener noreferrer"
               >

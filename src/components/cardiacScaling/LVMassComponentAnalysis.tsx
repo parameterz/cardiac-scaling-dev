@@ -116,7 +116,6 @@ const generateComponentAnalysisData = (
   const massData = getMeasurement("lvm")!; // LV mass
 
   // Use EXACT same population range as other tabs, but with MEAN values (Z=0)
-  // Using mean physiology instead of upper limits for realistic component analysis
   const populationOptions = {
     populationRange: {
       height: { min: 120, max: 220, step: 1 },
