@@ -3,7 +3,7 @@
 import React from 'react';
 
 // Types
-export type NavigationTab = "intro" | "linear" | "area" | "mass_volume" | "lv_mass_analysis" | "methods";
+export type NavigationTab = "intro" | "linear" | "area" | "mass_volume" | "lv_mass_analysis" | "test" | "methods";
 
 interface MeasurementCounts {
   linear: number;

@@ -1,12 +1,14 @@
 // src/components/cardiacScaling/core/DeweyMethodFactory.ts
 
 /**
- * CONSISTENT ALLOMETRIC TERMINOLOGY VERSION: Dewey Method Factory
+ * ENHANCED VERSION: DeweyMethodFactory with configurable Z-score parameter
  * 
- * Fixed terminology:
- * - All height scaling with exponent ≠ 1.0 is "allometric"
- * - Secondary classification: "empirical" vs "theoretical/geometric"
- * - Ratiometric only when exponent = 1.0 AND dimensionally matched
+ * Maintains all existing functionality while adding configurable Z-score support:
+ * - Z = 0.0: Use MESA mean values (typical physiology)
+ * - Z = 1.96: Use upper limits (pathological thresholds) - previous default
+ * - Any Z-score: Explore any percentile of the MESA distribution
+ * 
+ * Backward compatibility: Default Z-score = 1.96 preserves existing behavior
  */
 
 import { 
@@ -29,7 +31,7 @@ import {
 } from '@/data/scalingLaws';
 
 // =============================================================================
-// TYPE DEFINITIONS (unchanged)
+// TYPE DEFINITIONS
 // =============================================================================
 
 export type ScalingVariable = 'bsa' | 'lbm' | 'height';
@@ -114,6 +116,9 @@ export interface DeweyMethodResult {
   };
 }
 
+/**
+ * ENHANCED: Analysis options with configurable Z-score parameter
+ */
 export interface AnalysisOptions {
   populationRange?: {
     height: { min: number; max: number; step: number };
@@ -122,10 +127,115 @@ export interface AnalysisOptions {
   validationTarget?: 'strom' | 'literature' | 'geometric';
   includeCorrelations?: boolean;
   generateInsights?: boolean;
+  zScore?: number; // NEW: Z-score for reference value calculation (default: 1.96)
 }
 
 // =============================================================================
-// CANONICAL REFERENCE POPULATIONS (unchanged)
+// Z-SCORE UTILITIES & PRESETS
+// =============================================================================
+
+/**
+ * Common Z-score values for quick selection
+ */
+export const Z_SCORE_PRESETS = {
+  LOWER_LIMIT: -1.96,    // 2.5th percentile (Lower Limit of Normal)
+  MINUS_2SD: -2.0,       // Mean - 2 Standard Deviations
+  MINUS_1SD: -1.0,       // Mean - 1 Standard Deviation  
+  MEAN: 0.0,             // 50th percentile (Population Mean)
+  PLUS_1SD: 1.0,         // Mean + 1 Standard Deviation
+  PLUS_2SD: 2.0,         // Mean + 2 Standard Deviations
+  UPPER_LIMIT: 1.96,     // 97.5th percentile (Upper Limit of Normal) - previous default
+} as const;
+
+/**
+ * Generate human-readable labels for Z-score values
+ */
+export const getZScoreLabel = (zScore: number): string => {
+  // Check for exact matches with presets first
+  const presets = Object.entries(Z_SCORE_PRESETS).find(([_, value]) => 
+    Math.abs(value - zScore) < 0.01
+  );
+  
+  if (presets) {
+    const [key] = presets;
+    switch (key) {
+      case 'LOWER_LIMIT': return 'Lower Limit (2.5th percentile)';
+      case 'MINUS_2SD': return 'Mean - 2 SD (2.3rd percentile)';
+      case 'MINUS_1SD': return 'Mean - 1 SD (15.9th percentile)';
+      case 'MEAN': return 'Mean (50th percentile)';
+      case 'PLUS_1SD': return 'Mean + 1 SD (84.1st percentile)';
+      case 'PLUS_2SD': return 'Mean + 2 SD (97.7th percentile)';
+      case 'UPPER_LIMIT': return 'Upper Limit (97.5th percentile)';
+    }
+  }
+  
+  // Handle custom values
+  if (Math.abs(zScore - 0) < 0.01) return 'Mean (50th percentile)';
+  if (zScore > 0) return `Mean + ${zScore.toFixed(2)} SD`;
+  return `Mean - ${Math.abs(zScore).toFixed(2)} SD`;
+};
+
+/**
+ * Convert Z-score to approximate percentile
+ */
+export const getPercentileFromZScore = (zScore: number): number => {
+  // For common values, use exact percentiles
+  const exactPercentiles: Record<number, number> = {
+    [-1.96]: 2.5,
+    [-2.0]: 2.3,
+    [-1.0]: 15.9,
+    [0.0]: 50.0,
+    [1.0]: 84.1,
+    [2.0]: 97.7,
+    [1.96]: 97.5
+  };
+  
+  const exact = exactPercentiles[Math.round(zScore * 100) / 100];
+  if (exact !== undefined) return exact;
+  
+  // Approximation for other values
+  const percentile = 50 + 50 * Math.sign(zScore) * Math.sqrt(1 - Math.exp(-2 * zScore * zScore / Math.PI));
+  return Math.round(percentile * 10) / 10;
+};
+
+/**
+ * Validate Z-score is within reasonable bounds
+ */
+export const validateZScore = (zScore: number): { value: number; warnings: string[] } => {
+  const warnings: string[] = [];
+  let value = zScore;
+  
+  if (isNaN(zScore)) {
+    warnings.push('Invalid Z-score, using default (1.96)');
+    value = 1.96;
+  } else if (zScore < -3) {
+    warnings.push('Z-score below -3 may produce unrealistic reference values');
+  } else if (zScore > 3) {
+    warnings.push('Z-score above 3 may produce unrealistic reference values');
+  }
+  
+  return { value, warnings };
+};
+
+/**
+ * Get descriptive context for Z-score selection
+ */
+export const getZScoreContext = (zScore: number): string => {
+  if (Math.abs(zScore - 0) < 0.01) {
+    return 'Using mean MESA values - represents typical cardiac physiology';
+  } else if (Math.abs(zScore - 1.96) < 0.01) {
+    return 'Using upper limits of normal - represents pathological thresholds (previous default)';
+  } else if (Math.abs(zScore - (-1.96)) < 0.01) {
+    return 'Using lower limits of normal - represents minimum normal values';
+  } else if (zScore > 0) {
+    return `Using above-average values - represents larger cardiac measurements (${getPercentileFromZScore(zScore)}th percentile)`;
+  } else {
+    return `Using below-average values - represents smaller cardiac measurements (${getPercentileFromZScore(zScore)}th percentile)`;
+  }
+};
+
+// =============================================================================
+// CANONICAL REFERENCE POPULATIONS
 // =============================================================================
 
 const CANONICAL_REFERENCE_BASE = {
@@ -185,11 +295,11 @@ const generateCanonicalReferences = (
 };
 
 // =============================================================================
-// UPDATED: CONSISTENT ALLOMETRIC SCALING CONFIGURATIONS
+// SCALING CONFIGURATIONS
 // =============================================================================
 
 /**
- * Generate standard scaling configurations with CONSISTENT allometric terminology
+ * Generate standard scaling configurations with consistent allometric terminology
  */
 export const getStandardConfigurations = (measurementType: MeasurementType): ScalingConfiguration[] => {
   const expectedExponents = getScalingExponents(measurementType);
@@ -212,7 +322,7 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       name: expectedExponents.lbm === 1.0 
         ? 'Ratiometric LBM'
         : `Allometric LBM^${expectedExponents.lbm}`,
-      approach: 'allometric',  // Always use allometric calculation for LBM
+      approach: 'allometric',
       variable: 'lbm',
       exponent: expectedExponents.lbm,
       description: expectedExponents.lbm === 1.0
@@ -235,20 +345,18 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     });
   }
 
-  // Standard height scaling - check if ratiometric (1.0) or allometric (≠1.0)
+  // Standard height scaling
   if (expectedExponents.height === 1.0) {
-    // Linear measurements: Height^1.0 is ratiometric (geometrically appropriate)
     configs.push({
-      id: 'allometric_height',  // Keep same ID for consistency
+      id: 'allometric_height',
       name: 'Ratiometric Height',
-      approach: 'allometric',  // Always use allometric calculation for height (even when exponent=1.0)
+      approach: 'allometric',
       variable: 'height',
       exponent: 1.0,
       description: 'Geometrically appropriate height scaling for 1D measurements',
       sourceData: 'height'
     });
   } else {
-    // Area: Height^2.0, Mass/Volume: Height^3.0 is allometric standard
     configs.push({
       id: 'allometric_height',
       name: `Allometric Height^${expectedExponents.height}`,
@@ -286,51 +394,53 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
     );
   }
 
-  // No separate "theoretical" configuration needed since:
-  // - For areas: Height^2.0 IS the geometric ideal (standard = theoretical)
-  // - For mass/volume: Height^3.0 IS the theoretical geometric (standard = theoretical)
-
   return configs;
 };
 
 // =============================================================================
-// COEFFICIENT CALCULATION (unchanged logic, updated comments)
+// ENHANCED COEFFICIENT CALCULATION WITH Z-SCORE
 // =============================================================================
 
 /**
- * Calculate scaling coefficients using proper source data and exponents
- * Updated to handle consistent allometric terminology
+ * ENHANCED: Calculate scaling coefficients with configurable Z-score for reference point selection
+ * 
+ * The Z-score parameter determines which percentile of the MESA reference distribution 
+ * is used for coefficient derivation:
+ * - Higher Z-scores (e.g., 1.96) use upper percentiles (pathological thresholds)
+ * - Z-score = 0.0 uses mean values (typical physiology)
+ * - Lower Z-scores (e.g., -1.96) use lower percentiles (minimum normal)
  */
 const calculateCoefficients = (
   measurement: EnhancedMeasurementData,
   configuration: ScalingConfiguration,
-  referencePopulations: DeweyMethodResult['referencePopulations']
+  referencePopulations: DeweyMethodResult['referencePopulations'],
+  zScore: number = 1.96 // Default maintains backward compatibility (ULN)
 ): ScalingCoefficients => {
   
-  // Step 1 - Get indexed reference values from CORRECT source
+  // Step 1: Get indexed reference values using CONFIGURABLE Z-score
   const getIndexedValues = (sex: Sex) => {
     const data = measurement[sex];
     
     switch (configuration.sourceData) {
       case 'height':
         if (!data.height) throw new Error(`Height data not available for ${measurement.name}`);
-        return data.height.mean + 1.96 * data.height.sd;
+        return data.height.mean + zScore * data.height.sd;
       case 'height16':
         if (!data.height16) throw new Error(`Height^1.6 data not available for ${measurement.name}`);
-        return data.height16.mean + 1.96 * data.height16.sd;
+        return data.height16.mean + zScore * data.height16.sd;
       case 'height27':
         if (!data.height27) throw new Error(`Height^2.7 data not available for ${measurement.name}`);
-        return data.height27.mean + 1.96 * data.height27.sd;
+        return data.height27.mean + zScore * data.height27.sd;
       case 'bsa':
       default:
-        return data.bsa.mean + 1.96 * data.bsa.sd;
+        return data.bsa.mean + zScore * data.bsa.sd;
     }
   };
 
   const maleIndexed = getIndexedValues('male');
   const femaleIndexed = getIndexedValues('female');
 
-  // Step 2: Back-calculate absolute values using CORRECT scaling variable
+  // Step 2: Back-calculate absolute values using CORRECT scaling variable for the source data
   const getBackCalculationVariable = (sex: Sex) => {
     const pop = referencePopulations[sex];
     
@@ -350,9 +460,11 @@ const calculateCoefficients = (
   const maleBackCalcVar = getBackCalculationVariable('male');
   const femaleBackCalcVar = getBackCalculationVariable('female');
   
+  // Calculate absolute measurements from indexed values
   const maleAbsolute = maleIndexed * maleBackCalcVar;
   const femaleAbsolute = femaleIndexed * femaleBackCalcVar;
 
+  // Step 3: Coefficient derivation based on scaling approach
   if (configuration.approach === 'ratiometric') {
     // Ratiometric: coefficients are the indexed values themselves
     return {
@@ -401,7 +513,7 @@ const calculateCoefficients = (
 };
 
 // =============================================================================
-// POPULATION GENERATION & CHART DATA (unchanged)
+// POPULATION GENERATION & CHART DATA
 // =============================================================================
 
 const generatePopulationData = (
@@ -556,7 +668,7 @@ const generateChartData = (
 };
 
 // =============================================================================
-// VALIDATION & CORRELATION (unchanged)
+// VALIDATION & CORRELATION
 // =============================================================================
 
 const calculateValidationMetrics = (
@@ -708,9 +820,9 @@ const generateInsights = (
 
   let recommendedApproach = 'allometric_lbm';
   if (measurement.type === 'area') {
-    recommendedApproach = 'ratiometric_bsa'; // Same as allometric BSA^1.0
+    recommendedApproach = 'ratiometric_bsa';
   } else if (measurement.type === 'linear') {
-    recommendedApproach = 'allometric_height'; // Uses consistent ID
+    recommendedApproach = 'allometric_height';
   }
 
   const lbmSimilarity = coefficients['allometric_lbm']?.similarity.percentage || 0;
@@ -727,9 +839,15 @@ const generateInsights = (
 };
 
 // =============================================================================
-// MAIN FACTORY FUNCTIONS (unchanged)
+// ENHANCED MAIN FACTORY FUNCTIONS
 // =============================================================================
 
+/**
+ * ENHANCED: Main factory function with configurable Z-score support
+ * 
+ * Now accepts zScore in options to determine reference point for coefficient derivation.
+ * Maintains backward compatibility by defaulting to 1.96 (upper limits).
+ */
 export const generateScalingAnalysis = (
   measurement: EnhancedMeasurementData,
   formulaSelection: FormulaSelectionState,
@@ -739,9 +857,19 @@ export const generateScalingAnalysis = (
   const scalingConfigurations = configurations || getStandardConfigurations(measurement.type);
   const referencePopulations = generateCanonicalReferences(formulaSelection);
   
+  // Extract Z-score with backward-compatible default
+  const zScore = options.zScore ?? 1.96; // Default to ULN for backward compatibility
+  
+  console.log(`Scaling Analysis: Using Z-score ${zScore} for coefficient derivation`);
+  
   const coefficients: Record<string, ScalingCoefficients> = {};
   scalingConfigurations.forEach(config => {
-    coefficients[config.id] = calculateCoefficients(measurement, config, referencePopulations);
+    coefficients[config.id] = calculateCoefficients(
+      measurement, 
+      config, 
+      referencePopulations, 
+      zScore // Pass Z-score to coefficient calculation
+    );
   });
   
   const populationData: Record<string, { male: PopulationPoint[]; female: PopulationPoint[] }> = {};
@@ -783,12 +911,21 @@ export const generateScalingAnalysis = (
   };
 };
 
+/**
+ * ENHANCED: Quick comparison with Z-score support
+ * 
+ * Passes through Z-score to the full analysis for simplified two-approach comparison.
+ */
 export const generateQuickComparison = (
   measurement: EnhancedMeasurementData,
   formulaSelection: FormulaSelectionState,
   options: AnalysisOptions = {}
 ): DeweyMethodResult => {
   const expectedExponent = getScalingExponents(measurement.type).lbm;
+  
+  // Extract Z-score for logging
+  const zScore = options.zScore ?? 1.96;
+  console.log(`Quick Comparison: Using Z-score ${zScore} for ratiometric vs. allometric LBM`);
   
   const configurations: ScalingConfiguration[] = [
     {
@@ -801,11 +938,11 @@ export const generateQuickComparison = (
       sourceData: 'bsa'
     },
     {
-      id: 'allometric_lbm',  // Keep same ID
+      id: 'allometric_lbm',
       name: expectedExponent === 1.0 
         ? 'Ratiometric LBM'
         : `Allometric LBM^${expectedExponent}`,
-      approach: 'allometric',  // Always use allometric calculation for LBM
+      approach: 'allometric',
       variable: 'lbm',
       exponent: expectedExponent,
       description: expectedExponent === 1.0
@@ -815,11 +952,49 @@ export const generateQuickComparison = (
     }
   ];
 
+  // Pass through all options including Z-score to full analysis
   return generateScalingAnalysis(measurement, formulaSelection, configurations, options);
 };
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Utility function to get expected exponent for measurement type
+ */
+export const getExpectedLBMExponent = (measurementType: string): number => {
+  switch (measurementType) {
+    case 'linear': return 0.33;
+    case 'area': return 0.67;
+    case 'mass':
+    case 'volume': return 1.0;
+    default: return 0.33;
+  }
+};
+
+/**
+ * Format coefficient with appropriate precision based on measurement type
+ */
+export const formatCoefficient = (coefficient: number, measurementType: string): string => {
+  const precision = measurementType === 'linear' ? 4 : 
+                   measurementType === 'area' ? 3 : 2;
+  return coefficient.toFixed(precision);
+};
+
+// =============================================================================
+// EXPORTS
+// =============================================================================
 
 export default {
   generateScalingAnalysis,
   generateQuickComparison,
-  getStandardConfigurations
+  getStandardConfigurations,
+  Z_SCORE_PRESETS,
+  getZScoreLabel,
+  getPercentileFromZScore,
+  validateZScore,
+  getZScoreContext,
+  getExpectedLBMExponent,
+  formatCoefficient
 };
