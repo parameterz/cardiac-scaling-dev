@@ -6,11 +6,16 @@ import Navigation, { type NavigationTab } from "./components/Navigation";
 import Intro from "./components/Intro";
 import Methods from "./components/Methods";
 import FourWayScalingComparison from "./components/cardiacScaling/FourWayScalingComparison";
-import LVMassComponentAnalysis from "./components/cardiacScaling/LVMassComponentAnalysis"; // NEW IMPORT
+import LVMassComponentAnalysis from "./components/cardiacScaling/LVMassComponentAnalysis";
 import { getMeasurementsByType } from "./data/stromData";
+import { useFormulaSelection } from "./components/common/FormulaSelector";
 
 function App() {
   const [activeTab, setActiveTab] = useState<NavigationTab>("intro");
+
+  // PERSISTENT FORMULA SELECTION - Shared across all tabs
+  const { selection: formulaSelection, callbacks: formulaCallbacks } =
+    useFormulaSelection();
 
   // Get measurements for each category
   const linearMeasurements = getMeasurementsByType("linear");
@@ -63,6 +68,8 @@ function App() {
                 expectedApproaches: 4,
                 scalingInfo: "Expected: LBM^0.33, BSA^0.5, Height^1.0",
               }}
+              formulaSelection={formulaSelection}
+              formulaCallbacks={formulaCallbacks}
             />
           </section>
         )}
@@ -89,6 +96,8 @@ function App() {
                 scalingInfo:
                   "Expected: LBM^0.67, BSA^1.0 (=Ratiometric), Height^2.0",
               }}
+              formulaSelection={formulaSelection}
+              formulaCallbacks={formulaCallbacks}
             />
           </section>
         )}
@@ -114,15 +123,21 @@ function App() {
                 expectedApproaches: 6,
                 scalingInfo: "Expected: LBM^1.0, BSA^1.5, Height^1.6-3.0",
               }}
+              formulaSelection={formulaSelection}
+              formulaCallbacks={formulaCallbacks}
             />
           </section>
         )}
 
         {activeTab === "lv_mass_analysis" && (
           <section>
-            <LVMassComponentAnalysis />
+            <LVMassComponentAnalysis 
+              formulaSelection={formulaSelection}
+              formulaCallbacks={formulaCallbacks}
+            />
           </section>
         )}
+
         {activeTab === "methods" && (
           <section>
             <header>

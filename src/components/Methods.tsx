@@ -221,7 +221,7 @@ const Methods: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                doi:10.1161/JAHA.124.034029
+                doi:10.1161/JAHA.123.034029
               </a>
             </p>
 

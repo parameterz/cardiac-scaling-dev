@@ -18,8 +18,9 @@ import {
   type EnhancedMeasurementData,
 } from "@/data/stromData";
 import FormulaSelector, {
-  useFormulaSelection,
   FormulaValuesDisplay,
+  type FormulaSelectionState,
+  type FormulaSelectionCallbacks,
 } from "@/components/common/FormulaSelector";
 
 // Import the CONSISTENT ALLOMETRIC DeweyMethodFactory
@@ -47,6 +48,9 @@ interface FourWayScalingComparisonProps {
   availableMeasurements?: EnhancedMeasurementData[];
   initialMeasurement?: string;
   categoryContext?: CategoryContext;
+  // NEW: Accept formula selection as props for persistence across tabs
+  formulaSelection: FormulaSelectionState;
+  formulaCallbacks: FormulaSelectionCallbacks;
 }
 
 interface ToggleState {
@@ -129,6 +133,8 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
   availableMeasurements = STROM_MEASUREMENTS,
   initialMeasurement = "lvdd",
   categoryContext,
+  formulaSelection, // NOW PASSED AS PROP
+  formulaCallbacks,  // NOW PASSED AS PROP
 }) => {
   // State
   const [selectedMeasurementId, setSelectedMeasurementId] =
@@ -136,9 +142,9 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
 
-  // Formula selection
-  const { selection: formulaSelection, callbacks: formulaCallbacks } =
-    useFormulaSelection();
+  // REMOVED: Formula selection hook - now passed as props
+  // const { selection: formulaSelection, callbacks: formulaCallbacks } =
+  //   useFormulaSelection();
 
   // Get current measurement from available measurements
   const measurement =

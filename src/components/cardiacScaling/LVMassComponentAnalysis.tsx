@@ -13,8 +13,9 @@ import {
 } from "recharts";
 
 import FormulaSelector, {
-  useFormulaSelection,
   FormulaValuesDisplay,
+  type FormulaSelectionState,
+  type FormulaSelectionCallbacks,
 } from "@/components/common/FormulaSelector";
 import {
   generateScalingAnalysis,
@@ -75,6 +76,12 @@ interface ToggleState {
   lvpw: boolean;
 }
 
+// NEW: Component props interface
+interface LVMassComponentAnalysisProps {
+  formulaSelection: FormulaSelectionState;
+  formulaCallbacks: FormulaSelectionCallbacks;
+}
+
 // =============================================================================
 // STYLING CONSTANTS
 // =============================================================================
@@ -107,7 +114,7 @@ const LINE_STYLES = {
 const generateComponentAnalysisData = (
   linearConfigId: string,
   massConfigId: string,
-  formulaSelection: any
+  formulaSelection: FormulaSelectionState
 ): ComponentAnalysisPoint[] => {
   // Get the measurements
   const ivsData = getMeasurement("ivsd")!; // Septal wall thickness
@@ -314,9 +321,13 @@ const generateComponentAnalysisData = (
 // MAIN COMPONENT
 // =============================================================================
 
-const LVMassComponentAnalysis: React.FC = () => {
-  const { selection: formulaSelection, callbacks: formulaCallbacks } =
-    useFormulaSelection();
+const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
+  formulaSelection, // NOW PASSED AS PROP
+  formulaCallbacks,  // NOW PASSED AS PROP
+}) => {
+  // REMOVED: Formula selection hook - now passed as props
+  // const { selection: formulaSelection, callbacks: formulaCallbacks } =
+  //   useFormulaSelection();
 
   // Scaling method selections
   const [linearConfigId, setLinearConfigId] = useState("ratiometric_bsa");
