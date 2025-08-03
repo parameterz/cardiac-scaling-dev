@@ -130,11 +130,6 @@ const Intro: React.FC<IntroProps> = ({ onNavigate }) => {
           or patient care.
         </p>
 
-        <p style={{ fontSize: '0.9rem', color: 'var(--pico-muted-color)' }}>
-          <strong>Educational Use:</strong> This implementation serves as an 
-          interactive exploration of scaling theory principles. Some data is 
-          derived; clinical application requires independent validation.
-        </p>
       </section>
     </div>
   );

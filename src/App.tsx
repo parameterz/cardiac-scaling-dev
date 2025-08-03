@@ -9,6 +9,13 @@ import FourWayScalingComparison from "./components/cardiacScaling/FourWayScaling
 import LVMassComponentAnalysis from "./components/cardiacScaling/LVMassComponentAnalysis";
 import { getMeasurementsByType } from "./data/stromData";
 import { useFormulaSelection } from "./components/common/FormulaSelector";
+// Import version management
+import {
+  APP_NAME,
+  getShortFooterString,
+  getVersionString,
+  isFeatureEnabled,
+} from "./config/version";
 
 function App() {
   const [activeTab, setActiveTab] = useState<NavigationTab>("intro");
@@ -80,8 +87,7 @@ function App() {
               <hgroup>
                 <h2>Area Measurements</h2>
                 <p>
-                  Two-dimensional cardiac parameters including chamber areas and
-                  valve areas. Expected scaling relationships: LBM^0.67,
+                  Two-dimensional cardiac parameters including chamber areas. Expected scaling relationships: LBM^0.67,
                   BSA^1.0, Height^2.0
                 </p>
               </hgroup>
@@ -131,7 +137,7 @@ function App() {
 
         {activeTab === "lv_mass_analysis" && (
           <section>
-            <LVMassComponentAnalysis 
+            <LVMassComponentAnalysis
               formulaSelection={formulaSelection}
               formulaCallbacks={formulaCallbacks}
             />
@@ -145,7 +151,7 @@ function App() {
                 <h2>Methodology and Theoretical Framework</h2>
                 <p>
                   Mathematical foundations, scaling theory principles, and
-                  implementation of the Dewey methodology for cardiovascular
+                  implementation of the "Dewey methodology" for deriving novel cardiovascular
                   parameter normalization.
                 </p>
               </hgroup>
@@ -156,7 +162,7 @@ function App() {
         )}
       </main>
 
-      {/* Professional Footer */}
+      {/* Professional Footer with Proper Version Management */}
       <footer className="container">
         <hr />
         <div
@@ -168,7 +174,7 @@ function App() {
             fontSize: "0.9rem",
           }}
         >
-          <small>Cardiac Scaling Analysis Laboratory</small>
+          <small>{APP_NAME}</small>
           <small style={{ color: "var(--pico-muted-color)" }}>
             Educational research tool • Not for clinical use
           </small>
@@ -178,7 +184,7 @@ function App() {
           <small
             style={{ color: "var(--pico-muted-color)", fontSize: "0.85rem" }}
           >
-            v0.1.4 30.07.2025 • © 2025 Dan Dyar, MA, ACS, RDCS, FASE •
+            {getShortFooterString()}
           </small>
         </div>
       </footer>
