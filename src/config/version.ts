@@ -19,6 +19,14 @@ export const AUTHOR = 'Dan Dyar, MA, ACS, RDCS, FASE';
 
 export const VERSION_HISTORY = [
   {
+    version: '1.0.0',
+    date: '2025-08-03',
+    changes: ['initial commit'],
+    breakingChanges: [],
+    notes: 'Initial commit',
+
+  },
+  {
     version: '0.1.4',
     date: '2025-08-02',
     changes: [
