@@ -1,4 +1,5 @@
 // src/components/cardiacScaling/LVMassComponentAnalysis.tsx
+// ENHANCED: Added source badges, methodology panel, and transparency features
 
 import React, { useState, useMemo } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { BookOpen, Calculator } from "lucide-react"; // NEW: Professional icons
 
 import FormulaSelector, {
   FormulaValuesDisplay,
@@ -27,7 +29,7 @@ import { getMeasurement } from "@/data/stromData";
 import type { EnhancedMeasurementData } from "@/data/stromData";
 
 // =============================================================================
-// ASE LV MASS CALCULATION
+// ASE LV MASS CALCULATION (unchanged)
 // =============================================================================
 
 /**
@@ -48,7 +50,7 @@ export const calculateLVMass = (
 };
 
 // =============================================================================
-// DATA STRUCTURES
+// DATA STRUCTURES (unchanged)
 // =============================================================================
 
 interface ComponentAnalysisPoint {
@@ -76,14 +78,175 @@ interface ToggleState {
   lvpw: boolean;
 }
 
-// NEW: Component props interface
 interface LVMassComponentAnalysisProps {
   formulaSelection: FormulaSelectionState;
   formulaCallbacks: FormulaSelectionCallbacks;
 }
 
 // =============================================================================
-// STYLING CONSTANTS
+// NEW: SOURCE BADGE COMPONENT (reused from FourWayScaling)
+// =============================================================================
+
+interface SourceBadgeProps {
+  dataSource: 'published' | 'derived';
+  size?: number;
+}
+
+const SourceBadge: React.FC<SourceBadgeProps> = ({ dataSource, size = 14 }) => {
+  return (
+    <span className="source-badge">
+      {dataSource === 'published' ? (
+        <>
+          <BookOpen size={size} />
+          MESA
+        </>
+      ) : (
+        <>
+          <Calculator size={size} />
+          Derived
+        </>
+      )}
+    </span>
+  );
+};
+
+// =============================================================================
+// NEW: LV MASS METHODOLOGY PANEL
+// =============================================================================
+
+interface LVMassMethodologyPanelProps {
+  linearConfigs: ScalingConfiguration[];
+  massConfigs: ScalingConfiguration[];
+}
+
+const LVMassMethodologyPanel: React.FC<LVMassMethodologyPanelProps> = ({ 
+  linearConfigs, 
+  massConfigs 
+}) => {
+  return (
+    <details style={{ marginBottom: '2rem' }}>
+      <summary style={{ 
+        cursor: 'pointer', 
+        fontWeight: 'bold', 
+        fontSize: '1rem',
+        marginBottom: '0.5rem'
+      }}>
+        📚 LV Mass Analysis Methodology
+      </summary>
+      
+      <div style={{ 
+        marginTop: '1rem',
+        background: 'var(--pico-code-background-color)',
+        padding: '1.5rem',
+        borderRadius: 'var(--pico-border-radius)'
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '1.5rem'
+        }}>
+          {/* Component-Based Path */}
+          <div style={{
+            borderLeft: '4px solid #059669',
+            paddingLeft: '1rem'
+          }}>
+            <h5 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 0.75rem 0' }}>
+              <Calculator size={16} />
+              Component-Based Calculation
+            </h5>
+            <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Linear components (IVS, LVD, LVPW) are scaled individually using the selected method, 
+              then combined using the ASE formula to calculate total LV mass.
+            </p>
+            <div style={{ 
+              fontSize: '0.85rem', 
+              fontFamily: 'var(--pico-font-family-monospace)',
+              background: 'var(--pico-card-background-color)',
+              padding: '0.5rem',
+              borderRadius: '3px'
+            }}>
+              LVM = 0.8 × [1.04 × (IVS + LVD + LVPW)³ - LVD³] + 0.6
+            </div>
+          </div>
+
+          {/* Direct Mass Path */}
+          <div style={{
+            borderLeft: '4px solid #3b82f6',
+            paddingLeft: '1rem'
+          }}>
+            <h5 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 0.75rem 0' }}>
+              <BookOpen size={16} />
+              Direct MESA Scaling
+            </h5>
+            <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+              LV mass is scaled directly using published MESA reference values 
+              or derived coefficients from the Dewey methodology.
+            </p>
+            <div style={{ 
+              fontSize: '0.85rem', 
+              color: 'var(--pico-muted-color)',
+              fontStyle: 'italic'
+            }}>
+              Uses <strong>mean MESA values</strong> (Z-score = 0.0) for realistic component relationships, 
+              rather than upper limits (Z-score = 1.96)
+            </div>
+          </div>
+        </div>
+
+        {/* Data Source Classification */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1rem',
+          marginTop: '1.5rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid var(--pico-border-color)'
+        }}>
+          <div>
+            <h6 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BookOpen size={14} />
+              Published Methods
+            </h6>
+            <ul style={{ fontSize: '0.85rem', margin: 0, paddingLeft: '1.25rem' }}>
+              {linearConfigs.filter(c => c.dataSource === 'published').map(config => (
+                <li key={config.id}>{config.name}</li>
+              ))}
+            </ul>
+          </div>
+          
+          <div>
+            <h6 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Calculator size={14} />
+              Derived Methods
+            </h6>
+            <ul style={{ fontSize: '0.85rem', margin: 0, paddingLeft: '1.25rem' }}>
+              {linearConfigs.filter(c => c.dataSource === 'derived').map(config => (
+                <li key={config.id}>{config.name}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Methodological Note */}
+        <div style={{ 
+          marginTop: '1rem',
+          fontSize: '0.8rem',
+          color: 'var(--pico-muted-color)',
+          fontStyle: 'italic',
+          textAlign: 'center'
+        }}>
+          <strong>Why Two Paths?</strong> Comparing component-based calculation with direct scaling 
+          reveals how geometric relationships between linear measurements and total mass 
+          are preserved across different scaling methodologies.
+        </div>
+      </div>
+    </details>
+  );
+};
+
+// =============================================================================
+// STYLING CONSTANTS (unchanged)
 // =============================================================================
 
 const COLORS = {
@@ -108,7 +271,7 @@ const LINE_STYLES = {
 };
 
 // =============================================================================
-// DATA GENERATION
+// DATA GENERATION (unchanged)
 // =============================================================================
 
 const generateComponentAnalysisData = (
@@ -318,17 +481,13 @@ const generateComponentAnalysisData = (
 };
 
 // =============================================================================
-// MAIN COMPONENT
+// MAIN COMPONENT - ENHANCED
 // =============================================================================
 
 const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
-  formulaSelection, // NOW PASSED AS PROP
-  formulaCallbacks,  // NOW PASSED AS PROP
+  formulaSelection,
+  formulaCallbacks,
 }) => {
-  // REMOVED: Formula selection hook - now passed as props
-  // const { selection: formulaSelection, callbacks: formulaCallbacks } =
-  //   useFormulaSelection();
-
   // Scaling method selections
   const [linearConfigId, setLinearConfigId] = useState("ratiometric_bsa");
   const [massConfigId, setMassConfigId] = useState("ratiometric_bsa");
@@ -345,7 +504,15 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
 
   // Get available configurations
   const linearConfigs = getStandardConfigurations("linear");
-  const massConfigs = getStandardConfigurations("mass"); // Use mass type for more options
+  const massConfigs = getStandardConfigurations("mass");
+
+  // NEW: Get configuration metadata for selected methods
+  const getConfigurationInfo = (configId: string, configs: ScalingConfiguration[]) => {
+    return configs.find(c => c.id === configId);
+  };
+
+  const linearConfigInfo = getConfigurationInfo(linearConfigId, linearConfigs);
+  const massConfigInfo = getConfigurationInfo(massConfigId, massConfigs);
 
   // Generate data
   const analysisData = useMemo(() => {
@@ -399,7 +566,13 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
         </hgroup>
       </header>
 
-      {/* Controls */}
+      {/* NEW: Methodology Panel */}
+      <LVMassMethodologyPanel 
+        linearConfigs={linearConfigs} 
+        massConfigs={massConfigs} 
+      />
+
+      {/* ENHANCED: Controls with Source Badges */}
       <section style={{ marginBottom: "2rem" }}>
         <div
           style={{
@@ -411,11 +584,21 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             borderRadius: "var(--pico-border-radius)",
           }}
         >
-          {/* Linear Scaling Method */}
+          {/* Linear Scaling Method with Badge */}
           <div>
-            <label htmlFor="linear-method-select">
-              <strong>Linear Component Scaling</strong>
-            </label>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '0.5rem'
+            }}>
+              <label htmlFor="linear-method-select">
+                <strong>Linear Component Scaling</strong>
+              </label>
+              {linearConfigInfo && (
+                <SourceBadge dataSource={linearConfigInfo.dataSource} size={12} />
+              )}
+            </div>
             <select
               id="linear-method-select"
               value={linearConfigId}
@@ -424,26 +607,44 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             >
               {linearConfigs.map((config) => (
                 <option key={config.id} value={config.id}>
-                  {config.name}
+                  {config.name} {config.dataSource === 'published' ? '[MESA]' : '[Derived]'}
                 </option>
               ))}
             </select>
-            <div
-              style={{
-                fontSize: "0.875rem",
-                color: "var(--pico-muted-color)",
-                marginTop: "0.25rem",
-              }}
-            >
+            <div style={{
+              fontSize: "0.875rem",
+              color: "var(--pico-muted-color)",
+              marginTop: "0.25rem",
+            }}>
               Applied to IVS, LVD, LVPW measurements
+              {linearConfigInfo && (
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  fontStyle: 'italic', 
+                  marginTop: '0.25rem',
+                  color: 'var(--pico-primary)'
+                }}>
+                  {linearConfigInfo.methodologyNote}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Mass Scaling Method */}
+          {/* Mass Scaling Method with Badge */}
           <div>
-            <label htmlFor="mass-method-select">
-              <strong>LV Mass Scaling</strong>
-            </label>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '0.5rem'
+            }}>
+              <label htmlFor="mass-method-select">
+                <strong>LV Mass Scaling</strong>
+              </label>
+              {massConfigInfo && (
+                <SourceBadge dataSource={massConfigInfo.dataSource} size={12} />
+              )}
+            </div>
             <select
               id="mass-method-select"
               value={massConfigId}
@@ -452,24 +653,32 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             >
               {massConfigs.map((config) => (
                 <option key={config.id} value={config.id}>
-                  {config.name}
+                  {config.name} {config.dataSource === 'published' ? '[MESA]' : '[Derived]'}
                 </option>
               ))}
             </select>
-            <div
-              style={{
-                fontSize: "0.875rem",
-                color: "var(--pico-muted-color)",
-                marginTop: "0.25rem",
-              }}
-            >
+            <div style={{
+              fontSize: "0.875rem",
+              color: "var(--pico-muted-color)",
+              marginTop: "0.25rem",
+            }}>
               Applied to direct LV mass reference values
+              {massConfigInfo && (
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  fontStyle: 'italic', 
+                  marginTop: '0.25rem',
+                  color: 'var(--pico-primary)'
+                }}>
+                  {massConfigInfo.methodologyNote}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Charts Container */}
+      {/* Charts Container (unchanged) */}
       <section>
         <div
           style={{
@@ -479,7 +688,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             marginBottom: "2rem",
           }}
         >
-          {/* Linear Components Chart */}
+          {/* Linear Components Chart (unchanged) */}
           <div className="chart-container">
             <header style={{ marginBottom: "1rem" }}>
               <h3 style={{ margin: "0 0 0.5rem 0" }}>
@@ -632,7 +841,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
               (dotted)
             </div>
 
-            {/* Component Toggles */}
+            {/* Component Toggles (unchanged) */}
             <div className="button-group" style={{ marginBottom: "1rem" }}>
               <button
                 onClick={() => toggleComponent("lvd")}
@@ -670,7 +879,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             </div>
           </div>
 
-          {/* LV Mass Chart */}
+          {/* LV Mass Chart (unchanged) */}
           <div className="chart-container">
             <header style={{ marginBottom: "1rem" }}>
               <h3 style={{ margin: "0 0 0.5rem 0" }}>LV Mass Comparison</h3>
@@ -790,7 +999,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
         </div>
       </section>
 
-      {/* Advanced Controls - Progressive disclosure */}
+      {/* Advanced Controls - Progressive disclosure (unchanged) */}
       <section>
         <details
           open={showAdvancedControls}
@@ -824,7 +1033,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
         </details>
       </section>
 
-      {/* Analysis Summary */}
+      {/* ENHANCED: Analysis Summary with Source Context */}
       <section
         style={{
           background: "var(--pico-code-background-color)",
@@ -833,7 +1042,7 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
           marginTop: "2rem",
         }}
       >
-        <h3>Methodological Approach</h3>
+        <h3>Methodological Summary</h3>
         <div
           style={{
             display: "grid",
@@ -842,7 +1051,10 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
           }}
         >
           <div>
-            <h4>Linear Component Path</h4>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Calculator size={16} />
+              Component-Based Path
+            </h4>
             <ol style={{ fontSize: "0.9rem" }}>
               <li>Apply scaling method to IVS, LVD, LVPW</li>
               <li>Calculate LV mass using ASE formula</li>
@@ -850,10 +1062,13 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
             </ol>
           </div>
           <div>
-            <h4>Direct Mass Path</h4>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BookOpen size={16} />
+              Direct Mass Path
+            </h4>
             <ol style={{ fontSize: "0.9rem" }}>
               <li>Apply scaling method directly to LV mass</li>
-              <li>Use published reference values</li>
+              <li>Use published reference values or derived coefficients</li>
               <li>Results shown as solid lines</li>
             </ol>
           </div>
@@ -868,6 +1083,20 @@ const LVMassComponentAnalysis: React.FC<LVMassComponentAnalysisProps> = ({
               LVM = 0.8 × [1.04 × (IVS + LVD + LVPW)³ - LVD³] + 0.6
             </p>
           </div>
+        </div>
+        
+        {/* NEW: Current Configuration Summary */}
+        <div style={{
+          marginTop: '1.5rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid var(--pico-border-color)',
+          fontSize: '0.85rem',
+          color: 'var(--pico-muted-color)'
+        }}>
+          <strong>Current Configuration:</strong><br/>
+          Linear Components: {linearConfigInfo?.name} {linearConfigInfo && `[${linearConfigInfo.dataSource}]`}<br/>
+          LV Mass: {massConfigInfo?.name} {massConfigInfo && `[${massConfigInfo.dataSource}]`}<br/>
+          Data Source: Mean MESA values (Z-score = 0.0) for realistic physiological relationships
         </div>
       </section>
     </div>

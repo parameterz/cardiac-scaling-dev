@@ -1,4 +1,5 @@
 // src/components/cardiacScaling/FourWayScalingComparison.tsx
+// CHANGES: Added Lucide icons, source badges, and methodology explanation panel
 
 import React, { useState, useMemo } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { BookOpen, Calculator } from "lucide-react"; // NEW: Professional icons
 
 // Import core dependencies
 import {
@@ -23,7 +25,7 @@ import FormulaSelector, {
   type FormulaSelectionCallbacks,
 } from "@/components/common/FormulaSelector";
 
-// Import the CONSISTENT ALLOMETRIC DeweyMethodFactory
+// Import the ENHANCED DeweyMethodFactory with dataSource metadata
 import {
   generateScalingAnalysis,
   getStandardConfigurations,
@@ -35,7 +37,7 @@ import {
 import DataDisclosurePanel from "./DataDisclosurePanel";
 
 // =============================================================================
-// ENHANCED COMPONENT INTERFACE
+// ENHANCED COMPONENT INTERFACE (unchanged)
 // =============================================================================
 
 interface CategoryContext {
@@ -48,7 +50,6 @@ interface FourWayScalingComparisonProps {
   availableMeasurements?: EnhancedMeasurementData[];
   initialMeasurement?: string;
   categoryContext?: CategoryContext;
-  // NEW: Accept formula selection as props for persistence across tabs
   formulaSelection: FormulaSelectionState;
   formulaCallbacks: FormulaSelectionCallbacks;
 }
@@ -73,7 +74,7 @@ interface ConfigurationDisplay {
 }
 
 // =============================================================================
-// CONSISTENT ALLOMETRIC COLOR PALETTE
+// CONSISTENT ALLOMETRIC COLOR PALETTE (unchanged)
 // =============================================================================
 
 const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
@@ -126,50 +127,165 @@ const CONFIGURATION_COLORS: Record<string, ConfigurationDisplay> = {
 };
 
 // =============================================================================
-// MAIN COMPONENT - PROFESSIONAL STYLING
+// NEW: SOURCE BADGE COMPONENT
+// =============================================================================
+
+interface SourceBadgeProps {
+  dataSource: 'published' | 'derived';
+  size?: number;
+}
+
+const SourceBadge: React.FC<SourceBadgeProps> = ({ dataSource, size = 14 }) => {
+  return (
+    <span className="source-badge">
+      {dataSource === 'published' ? (
+        <>
+          <BookOpen size={size} />
+          MESA
+        </>
+      ) : (
+        <>
+          <Calculator size={size} />
+          Derived
+        </>
+      )}
+    </span>
+  );
+};
+
+// =============================================================================
+// NEW: METHODOLOGY EXPLANATION PANEL
+// =============================================================================
+
+interface MethodologyPanelProps {
+  configurations: ScalingConfiguration[];
+}
+
+const MethodologyPanel: React.FC<MethodologyPanelProps> = ({ configurations }) => {
+  const publishedConfigs = configurations.filter(c => c.dataSource === 'published');
+  const derivedConfigs = configurations.filter(c => c.dataSource === 'derived');
+
+  return (
+    <details style={{ marginBottom: '1.5rem' }}>
+      <summary style={{ 
+        cursor: 'pointer', 
+        fontWeight: 'bold', 
+        fontSize: '1rem',
+        marginBottom: '0.5rem'
+      }}>
+        📚 Data Sources & Methodology
+      </summary>
+      
+      <div style={{ 
+        marginTop: '1rem',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '1.5rem'
+      }}>
+        {/* Published MESA Data */}
+        <div style={{
+          background: 'var(--pico-code-background-color)',
+          padding: '1rem',
+          borderRadius: 'var(--pico-border-radius)',
+          borderLeft: '4px solid #3b82f6'
+        }}>
+          <h5 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BookOpen size={16} />
+            Published MESA Data
+          </h5>
+          <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+            These approaches use the exact scaling relationships published by Strom et al., 
+            applying the reference values as originally indexed in the MESA study.
+          </p>
+          
+          {publishedConfigs.length > 0 && (
+            <div>
+              <strong style={{ fontSize: '0.85rem' }}>Available methods:</strong>
+              <ul style={{ fontSize: '0.85rem', marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+                {publishedConfigs.map(config => (
+                  <li key={config.id}>{config.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Derived Methods */}
+        <div style={{
+          background: 'var(--pico-code-background-color)',
+          padding: '1rem',
+          borderRadius: 'var(--pico-border-radius)',
+          borderLeft: '4px solid #059669'
+        }}>
+          <h5 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Calculator size={16} />
+            Derived Methods (Dewey Methodology)
+          </h5>
+          <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+            These approaches use coefficients derived by back-calculating absolute values 
+            from MESA BSA-indexed data, then applying alternative scaling relationships 
+            based on geometric theory and biological principles.
+          </p>
+          
+          {derivedConfigs.length > 0 && (
+            <div>
+              <strong style={{ fontSize: '0.85rem' }}>Available methods:</strong>
+              <ul style={{ fontSize: '0.85rem', marginTop: '0.5rem', paddingLeft: '1.25rem' }}>
+                {derivedConfigs.map(config => (
+                  <li key={config.id}>{config.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Methodological Notes */}
+      <div style={{ 
+        marginTop: '1.5rem',
+        fontSize: '0.85rem',
+        color: 'var(--pico-muted-color)',
+        fontStyle: 'italic'
+      }}>
+        <strong>Methodology Reference:</strong> Dewey FE, et al. Does size matter? Clinical applications of scaling cardiac size and function for body size. <em>Circulation.</em> 2008;117:2279-2287.
+      </div>
+    </details>
+  );
+};
+
+// =============================================================================
+// MAIN COMPONENT - WITH ENHANCED CONFIGURATION DISPLAY
 // =============================================================================
 
 const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
   availableMeasurements = STROM_MEASUREMENTS,
   initialMeasurement = "lvdd",
   categoryContext,
-  formulaSelection, // NOW PASSED AS PROP
-  formulaCallbacks,  // NOW PASSED AS PROP
+  formulaSelection,
+  formulaCallbacks,
 }) => {
-  // State
-  const [selectedMeasurementId, setSelectedMeasurementId] =
-    useState(initialMeasurement);
+  // State (unchanged)
+  const [selectedMeasurementId, setSelectedMeasurementId] = useState(initialMeasurement);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
 
-  // REMOVED: Formula selection hook - now passed as props
-  // const { selection: formulaSelection, callbacks: formulaCallbacks } =
-  //   useFormulaSelection();
+  // Get current measurement from available measurements (unchanged)
+  const measurement = availableMeasurements.find((m) => m.id === selectedMeasurementId) || availableMeasurements[0];
 
-  // Get current measurement from available measurements
-  const measurement =
-    availableMeasurements.find((m) => m.id === selectedMeasurementId) ||
-    availableMeasurements[0];
-
-  // Update selected measurement when initialMeasurement changes (category switching)
+  // Update selected measurement when initialMeasurement changes (unchanged)
   React.useEffect(() => {
-    if (
-      initialMeasurement &&
-      availableMeasurements.find((m) => m.id === initialMeasurement)
-    ) {
+    if (initialMeasurement && availableMeasurements.find((m) => m.id === initialMeasurement)) {
       setSelectedMeasurementId(initialMeasurement);
     } else if (availableMeasurements.length > 0) {
       setSelectedMeasurementId(availableMeasurements[0].id);
     }
   }, [initialMeasurement, availableMeasurements]);
 
-  // Generate factory result with all configurations
+  // Generate factory result with all configurations (unchanged)
   const factoryResult = useMemo(() => {
     if (!measurement) return null;
 
-    console.log(
-      `Analysis: Generating scaling analysis for ${measurement.name}...`
-    );
+    console.log(`Analysis: Generating scaling analysis for ${measurement.name}...`);
 
     // Get all standard configurations for this measurement type
     const configurations = getStandardConfigurations(measurement.type);
@@ -188,22 +304,17 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
       }
     );
 
-    console.log(
-      `Analysis Complete: ${configurations.length} configurations analyzed`
-    );
+    console.log(`Analysis Complete: ${configurations.length} configurations analyzed`);
     return result;
   }, [measurement, formulaSelection, categoryContext]);
 
-  // Smart toggle state - start with key approaches visible
+  // Smart toggle state (unchanged)
   const [toggleState, setToggleState] = useState<ToggleState>(() => {
     if (!factoryResult) return {};
 
     const initialState: ToggleState = {};
     factoryResult.configurations.forEach((config) => {
-      // Start with the most impactful comparison: Ratiometric BSA vs Allometric LBM
-      const isKeyApproach = ["ratiometric_bsa", "allometric_lbm"].includes(
-        config.id
-      );
+      const isKeyApproach = ["ratiometric_bsa", "allometric_lbm"].includes(config.id);
       initialState[config.id] = {
         male: isKeyApproach,
         female: isKeyApproach,
@@ -212,7 +323,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     return initialState;
   });
 
-  // Update toggle state when configurations change
+  // Update toggle state when configurations change (unchanged)
   React.useEffect(() => {
     if (!factoryResult) return;
 
@@ -223,10 +334,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         if (existing) {
           newState[config.id] = existing;
         } else {
-          // Default for new configurations - start with key comparison
-          const isKeyApproach = ["ratiometric_bsa", "allometric_lbm"].includes(
-            config.id
-          );
+          const isKeyApproach = ["ratiometric_bsa", "allometric_lbm"].includes(config.id);
           newState[config.id] = {
             male: isKeyApproach,
             female: isKeyApproach,
@@ -241,7 +349,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     return <div>Loading comprehensive scaling analysis...</div>;
   }
 
-  // Helper functions
+  // Helper functions (unchanged)
   const toggleConfiguration = (configId: string, sex: "male" | "female") => {
     setToggleState((prev) => ({
       ...prev,
@@ -264,7 +372,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     }));
   };
 
-  // Quick action presets
+  // Quick action presets (unchanged)
   const showKeyComparison = () => {
     const newState: ToggleState = {};
     factoryResult.configurations.forEach((config) => {
@@ -290,7 +398,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
     setToggleState(newState);
   };
 
-  // Reference population for display
+  // Reference population for display (unchanged)
   const referencePopulation = {
     male: {
       height: factoryResult.referencePopulations.male.height,
@@ -308,7 +416,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
 
   return (
     <div>
-      {/* Professional Header - Clean and functional */}
+      {/* Professional Header - Clean and functional (unchanged) */}
       <header style={{ marginBottom: "1rem" }}>
         <div
           style={{
@@ -366,7 +474,10 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </div>
       </header>
 
-      {/* Primary Visualization - Chart first! */}
+      {/* NEW: Methodology Explanation Panel */}
+      <MethodologyPanel configurations={factoryResult.configurations} />
+
+      {/* Primary Visualization - Chart first! (unchanged) */}
       <section className="chart-container" style={{ marginBottom: "1.5rem" }}>
         <header style={{ marginBottom: "1rem" }}>
           <h3 style={{ margin: "0 0 0.5rem 0" }}>
@@ -436,7 +547,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
               }}
             />
 
-            {/* Render lines for each configuration */}
+            {/* Render lines for each configuration (unchanged) */}
             {factoryResult.configurations.map((config) => {
               const display = CONFIGURATION_COLORS[config.id] || {
                 color: { male: "#6b7280", female: "#9ca3af" },
@@ -478,7 +589,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
               );
             })}
 
-            {/* Reference lines */}
+            {/* Reference lines (unchanged) */}
             <ReferenceLine
               x={0}
               stroke="var(--pico-muted-color)"
@@ -490,7 +601,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
               strokeWidth={1}
             />
 
-            {/* Reference population markers */}
+            {/* Reference population markers (unchanged) */}
             <ReferenceLine
               x={referencePopulation.male.bsa}
               stroke="#3b82f6"
@@ -517,7 +628,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </ResponsiveContainer>
       </section>
 
-      {/* Scaling Approach Controls  */}
+      {/* ENHANCED: Scaling Approach Controls with Source Badges */}
       <section style={{ marginBottom: "1.5rem" }}>
         <h4 style={{ margin: "0 0 1rem 0" }}>Scaling Approach Controls</h4>
         <div className="metrics-grid">
@@ -542,11 +653,20 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                 className="metric-card"
                 style={{ padding: "1rem" }}
               >
-                <h5 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem" }}>
-                  {display.name}
-                </h5>
+                {/* ENHANCED: Header with Source Badge */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginBottom: '0.5rem'
+                }}>
+                  <h5 style={{ margin: 0, fontSize: "1rem" }}>
+                    {display.name}
+                  </h5>
+                  <SourceBadge dataSource={config.dataSource} />
+                </div>
 
-                {/* Toggle Controls - Your excellent design preserved! */}
+                {/* Toggle Controls - Preserved excellent design! */}
                 <div
                   className="button-group"
                   style={{ marginBottom: "0.75rem" }}
@@ -584,14 +704,12 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
                   </button>
                 </div>
 
-                {/* Summary statistics */}
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--pico-muted-color)",
-                  }}
-                >
-                  <div>{display.description}</div>
+                {/* ENHANCED: Description with Methodology Note */}
+                <div style={{ fontSize: "0.75rem", color: "var(--pico-muted-color)" }}>
+                  <div style={{ marginBottom: '0.25rem' }}>{display.description}</div>
+                  <div style={{ fontStyle: 'italic', fontSize: '0.7rem' }}>
+                    {config.methodologyNote}
+                  </div>
                 </div>
               </div>
             );
@@ -599,7 +717,7 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
         </div>
       </section>
 
-      {/* Advanced Controls - Progressive disclosure */}
+      {/* Advanced Controls - Progressive disclosure (unchanged) */}
       <section>
         <details
           open={showAdvancedControls}
@@ -632,7 +750,8 @@ const FourWayScalingComparison: React.FC<FourWayScalingComparisonProps> = ({
           </div>
         </details>
       </section>
-      {/* Data Disclosure Panel */}
+
+      {/* Data Disclosure Panel (unchanged) */}
       <section>
         <DataDisclosurePanel
           factoryResult={factoryResult}

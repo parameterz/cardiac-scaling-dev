@@ -45,6 +45,8 @@ export interface ScalingConfiguration {
   exponent: number;
   description: string;
   sourceData?: 'bsa' | 'height' | 'height16' | 'height27';
+  dataSource: 'published' | 'derived'; // NEW: Distinguishes MESA direct vs derived
+  methodologyNote: string; // NEW: Detailed explanation of data source
 }
 
 export interface PopulationPoint {
@@ -301,11 +303,15 @@ const generateCanonicalReferences = (
 /**
  * Generate standard scaling configurations with consistent allometric terminology
  */
+/**
+ * Generate standard scaling configurations with enhanced metadata
+ * Now includes explicit dataSource classification and methodology notes
+ */
 export const getStandardConfigurations = (measurementType: MeasurementType): ScalingConfiguration[] => {
   const expectedExponents = getScalingExponents(measurementType);
 
   const configs: ScalingConfiguration[] = [
-    // Ratiometric BSA (always uses BSA-indexed data)
+    // Published MESA Data - Ratiometric BSA (always uses BSA-indexed data)
     {
       id: 'ratiometric_bsa',
       name: 'Ratiometric BSA',
@@ -313,10 +319,12 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       variable: 'bsa',
       exponent: 1.0,
       description: 'Current clinical standard - linear BSA indexing',
-      sourceData: 'bsa'
+      sourceData: 'bsa',
+      dataSource: 'published',
+      methodologyNote: 'Uses published MESA BSA-indexed reference values directly as reported by Strom et al.'
     },
 
-    // Allometric LBM (universal biological - uses BSA-indexed data)
+    // Derived - Allometric LBM (universal biological - uses BSA-indexed data for back-calculation)
     {
       id: 'allometric_lbm',
       name: expectedExponents.lbm === 1.0 
@@ -328,7 +336,9 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       description: expectedExponents.lbm === 1.0
         ? 'Geometrically appropriate - both measurement and LBM are 3D/mass'
         : 'Universal biological scaling based on lean body mass',
-      sourceData: 'bsa'
+      sourceData: 'bsa',
+      dataSource: 'derived',
+      methodologyNote: 'Coefficients derived from MESA BSA data using Dewey back-calculation methodology with lean body mass scaling principles'
     }
   ];
 
@@ -341,11 +351,13 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       variable: 'bsa',
       exponent: expectedExponents.bsa,
       description: 'Geometric scaling using body surface area',
-      sourceData: 'bsa'
+      sourceData: 'bsa',
+      dataSource: 'derived',
+      methodologyNote: 'Coefficients derived from MESA BSA data using geometric scaling theory with dimensionally-appropriate BSA exponents'
     });
   }
 
-  // Standard height scaling
+  // Published MESA Data - Standard height scaling
   if (expectedExponents.height === 1.0) {
     configs.push({
       id: 'allometric_height',
@@ -354,7 +366,9 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       variable: 'height',
       exponent: 1.0,
       description: 'Geometrically appropriate height scaling for 1D measurements',
-      sourceData: 'height'
+      sourceData: 'height',
+      dataSource: 'published',
+      methodologyNote: 'Uses published MESA height-indexed reference values directly as reported by Strom et al.'
     });
   } else {
     configs.push({
@@ -366,11 +380,13 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
       description: measurementType === 'area' 
         ? 'Geometric ideal allometric height scaling for 2D measurements'
         : 'Theoretical geometric allometric height scaling for 3D measurements',
-      sourceData: 'height'
+      sourceData: 'height',
+      dataSource: 'derived',
+      methodologyNote: 'Coefficients derived from MESA height data using geometric scaling theory with dimensionally-appropriate height exponents'
     });
   }
 
-  // Add empirical allometric height options for area/mass/volume measurements
+  // Published MESA Data - Add empirical allometric height options for area/mass/volume measurements
   if (measurementType === 'area' || measurementType === 'mass' || measurementType === 'volume') {
     configs.push(
       {
@@ -380,7 +396,9 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
         variable: 'height',
         exponent: 1.6,
         description: 'Empirical allometric height scaling from literature',
-        sourceData: 'height16'
+        sourceData: 'height16',
+        dataSource: 'published',
+        methodologyNote: 'Uses published MESA height^1.6-indexed reference values directly as reported by Strom et al.'
       },
       {
         id: 'allometric_height_27',
@@ -389,7 +407,9 @@ export const getStandardConfigurations = (measurementType: MeasurementType): Sca
         variable: 'height',
         exponent: 2.7,
         description: 'Empirical allometric height scaling from literature',
-        sourceData: 'height27'
+        sourceData: 'height27',
+        dataSource: 'published',
+        methodologyNote: 'Uses published MESA height^2.7-indexed reference values directly as reported by Strom et al.'
       }
     );
   }
@@ -935,7 +955,9 @@ export const generateQuickComparison = (
       variable: 'bsa',
       exponent: 1.0,
       description: 'Current clinical standard',
-      sourceData: 'bsa'
+      sourceData: 'bsa',
+      dataSource: 'published',
+      methodologyNote: 'Uses published MESA BSA-indexed reference values directly as reported by Strom et al.'
     },
     {
       id: 'allometric_lbm',
@@ -948,7 +970,9 @@ export const generateQuickComparison = (
       description: expectedExponent === 1.0
         ? 'Geometrically appropriate scaling'
         : 'Universal biological scaling',
-      sourceData: 'bsa'
+      sourceData: 'bsa',
+      dataSource: 'derived',
+      methodologyNote: 'Coefficients derived from MESA BSA data using Dewey back-calculation methodology with lean body mass scaling principles'
     }
   ];
 
